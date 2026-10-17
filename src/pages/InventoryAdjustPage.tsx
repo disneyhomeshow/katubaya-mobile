@@ -18,7 +18,7 @@ import { useInventory } from '@/hooks/useInventory';
 import { getExpirationStatus, getDaysUntilExpiry } from '@/domain/rules/expiration';
 import type { Lot, Crop, Cultivar } from '@/domain/contracts/types';
 import { cn } from '@/lib/utils';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 
 interface LotWithDetails {
   lot: Lot;
@@ -29,7 +29,6 @@ interface LotWithDetails {
 export default function InventoryAdjustPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { toast } = useToast();
   const { adjustLot } = useInventory();
 
   const [selectedLot, setSelectedLot] = useState<LotWithDetails | null>(null);
@@ -73,11 +72,8 @@ export default function InventoryAdjustPage() {
     
     await adjustLot(selectedLot.lot.id, delta, reason, notes);
     
-    toast({
-      title: t('inventory.adjustTitle'),
-      description: delta < 0 
-        ? t('inventory.reasons.' + reason) 
-        : t('inventory.reasons.correction'),
+    toast.success(t('inventory.adjustTitle'), {
+      description: delta < 0 ? t('inventory.reasons.' + reason) : t('inventory.reasons.correction'),
     });
   };
 

@@ -33,7 +33,7 @@ export function InventoryGroupCard({ item, onSelectLot }: InventoryGroupCardProp
   return (
     <Card className={cn(
       'transition-all',
-      item.expirationStatus === 'expired' && 'opacity-70 border-destructive/30',
+      item.expirationStatus === 'expired' && 'opacity-70 border-harvest-expired/30',
       item.expirationStatus === 'expiring_soon' && 'border-harvest-warning/50'
     )}>
       <Collapsible open={isOpen} onOpenChange={setIsOpen}>

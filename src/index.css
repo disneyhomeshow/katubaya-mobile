@@ -99,16 +99,3 @@
   }
 }
 
-@layer utilities {
-  .harvest-fresh {
-    @apply bg-[hsl(var(--harvest-success)/0.1)] text-[hsl(var(--harvest-success))] border-[hsl(var(--harvest-success))];
-  }
-
-  .harvest-warning {
-    @apply bg-[hsl(var(--harvest-warning)/0.1)] text-[hsl(var(--harvest-warning))] border-[hsl(var(--harvest-warning))];
-  }
-
-  .harvest-expired {
-    @apply bg-[hsl(var(--harvest-expired)/0.1)] text-[hsl(var(--harvest-expired))] border-[hsl(var(--harvest-expired))];
-  }
-}

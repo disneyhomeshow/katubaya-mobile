@@ -16,12 +16,11 @@ import {
   ConfigDialog 
 } from '@/components/availability';
 import { useAvailability } from '@/hooks/useAvailability';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import type { AvailabilityList } from '@/domain/contracts/types';
 
 export default function AvailabilityPage() {
   const { t } = useTranslation();
-  const { toast } = useToast();
   const {
     currentAvailability,
     config,
@@ -49,15 +48,9 @@ export default function AvailabilityPage() {
     try {
       const newList = await generateAvailability();
       setAvailability(newList);
-      toast({
-        title: t('availability.title'),
-        description: 'Lista gerada com sucesso!'
-      });
+      toast.success(t('availability.title'), { description: 'Lista gerada com sucesso!' });
     } catch (error) {
-      toast({
-        title: t('errors.generic'),
-        variant: 'destructive'
-      });
+      toast.error(t('errors.generic'));
     } finally {
       setIsGenerating(false);
     }
@@ -68,10 +61,7 @@ export default function AvailabilityPage() {
     
     const success = await copyToClipboard(availability.generatedMessage);
     if (success) {
-      toast({
-        title: t('availability.copied'),
-        description: 'Cole no WhatsApp para enviar'
-      });
+      toast.success(t('availability.copied'), { description: 'Cole no WhatsApp para enviar' });
     }
   };
 

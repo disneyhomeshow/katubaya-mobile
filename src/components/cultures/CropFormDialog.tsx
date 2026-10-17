@@ -33,7 +33,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { useCrops } from '@/hooks';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import type { Crop, CropCategory, UnitType } from '@/domain/contracts/types';
 
 const UNIT_OPTIONS: UnitType[] = ['kg', 'g', 'unit', 'bunch', 'liter', 'ml', 'box', 'bag'];
@@ -60,7 +60,6 @@ interface CropFormDialogProps {
 export function CropFormDialog({ open, onOpenChange, crop, categories }: CropFormDialogProps) {
   const { t } = useTranslation();
   const { createCrop, updateCrop } = useCrops();
-  const { toast } = useToast();
 
   const form = useForm<CropFormValues>({
     resolver: zodResolver(cropFormSchema),
@@ -112,7 +111,7 @@ export function CropFormDialog({ open, onOpenChange, crop, categories }: CropFor
           isFavorite: data.isFavorite,
           notes: data.notes,
         });
-        toast({ title: 'Cultura atualizada!' });
+        toast.success('Cultura atualizada!');
       } else {
         await createCrop({
           name: data.name,
@@ -123,15 +122,11 @@ export function CropFormDialog({ open, onOpenChange, crop, categories }: CropFor
           isFavorite: data.isFavorite,
           notes: data.notes,
         });
-        toast({ title: 'Cultura criada!' });
+        toast.success('Cultura criada!');
       }
       onOpenChange(false);
     } catch (error) {
-      toast({ 
-        title: 'Erro', 
-        description: 'Não foi possível salvar a cultura',
-        variant: 'destructive' 
-      });
+      toast.error('Erro', { description: 'Não foi possível salvar a cultura' });
     }
   };
 

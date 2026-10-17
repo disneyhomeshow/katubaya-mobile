@@ -41,7 +41,8 @@
     "noHarvests": "No harvests recorded",
     "expiringSoon": "Expiring Soon",
     "noExpiring": "No items expiring",
-    "quickActions": "Quick Actions"
+    "quickActions": "Quick Actions",
+    "viewAll": "View all"
   },
   "harvest": {
     "title": "Log Harvest",
@@ -65,21 +66,6 @@
     "quickAddHalf": "+0.5",
     "quickAddFive": "+5",
     "duplicate": "Duplicate"
-  },
-  "home": {
-    "greeting": "Hello, Farmer!",
-    "currentAvailability": "Current Availability",
-    "noAvailability": "No availability list",
-    "generateFirst": "Generate your first list",
-    "upToDate": "Up to date",
-    "stale": "Outdated",
-    "lastGenerated": "Generated at",
-    "recentHarvests": "Recent Harvests",
-    "noHarvests": "No harvests recorded",
-    "expiringSoon": "Expiring Soon",
-    "noExpiring": "No items expiring",
-    "quickActions": "Quick Actions",
-    "viewAll": "View all"
   },
   "inventory": {
     "title": "Inventory",
@@ -206,5 +192,9 @@
   "confirmation": {
     "delete": "Are you sure you want to delete?",
     "discard": "Discard changes?"
+  },
+  "notFound": {
+    "title": "Page not found",
+    "backHome": "Back to home"
   }
 }

@@ -40,7 +40,7 @@ export function LotCard({
   return (
     <Card className={cn(
       'transition-all',
-      expirationStatus === 'expired' && 'opacity-60 border-destructive/30',
+      expirationStatus === 'expired' && 'opacity-60 border-harvest-expired/30',
       expirationStatus === 'expiring_soon' && 'border-harvest-warning/50'
     )}>
       <CardContent className="p-4">

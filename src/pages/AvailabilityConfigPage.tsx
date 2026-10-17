@@ -13,12 +13,11 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useAvailability } from '@/hooks/useAvailability';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 
 export default function AvailabilityConfigPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { toast } = useToast();
   const { config, saveConfig } = useAvailability();
 
   const [farmName, setFarmName] = useState('');
@@ -46,10 +45,7 @@ export default function AvailabilityConfigPage() {
         defaultHeaderText: headerText || undefined,
         defaultFooterText: footerText || undefined
       });
-      toast({
-        title: t('actions.save'),
-        description: t('availability.configSaved')
-      });
+      toast.success(t('actions.save'), { description: t('availability.configSaved') });
       navigate('/availability');
     } finally {
       setIsSubmitting(false);

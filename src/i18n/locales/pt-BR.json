@@ -192,5 +192,9 @@
   "confirmation": {
     "delete": "Tem certeza que deseja excluir?",
     "discard": "Descartar alterações?"
+  },
+  "notFound": {
+    "title": "Página não encontrada",
+    "backHome": "Voltar ao início"
   }
 }

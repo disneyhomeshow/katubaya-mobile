@@ -27,7 +27,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { useCultivars } from '@/hooks';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import type { Cultivar } from '@/domain/contracts/types';
 
 const cultivarFormSchema = z.object({
@@ -56,7 +56,6 @@ export function CultivarFormDialog({
 }: CultivarFormDialogProps) {
   const { t } = useTranslation();
   const { createCultivar, updateCultivar } = useCultivars(cropId);
-  const { toast } = useToast();
 
   const form = useForm<CultivarFormValues>({
     resolver: zodResolver(cultivarFormSchema),
@@ -100,18 +99,14 @@ export function CultivarFormDialog({
 
       if (cultivar) {
         await updateCultivar(cultivar.id, payload);
-        toast({ title: 'Variedade atualizada!' });
+        toast.success('Variedade atualizada!');
       } else {
         await createCultivar(payload);
-        toast({ title: 'Variedade criada!' });
+        toast.success('Variedade criada!');
       }
       onOpenChange(false);
     } catch (error) {
-      toast({ 
-        title: 'Erro', 
-        description: 'Não foi possível salvar a variedade',
-        variant: 'destructive' 
-      });
+      toast.error('Erro', { description: 'Não foi possível salvar a variedade' });
     }
   };
 

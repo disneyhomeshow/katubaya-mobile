@@ -2,4 +2,4 @@
  * Services - Barrel Export
  */
 
-export { exportService, type ExportResult } from './exportService';
+export { exportZip, downloadBlob, type ExportResult, type ExportType } from './exportService';

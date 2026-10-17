@@ -2,8 +2,11 @@
  * Settings Page
  */
 
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Download, Wifi, Loader2, Package, Archive } from 'lucide-react';
+import { useLiveQuery } from 'dexie-react-hooks';
+import { Smartphone, Loader2, Package, Archive } from 'lucide-react';
+import { toast } from 'sonner';
 import { AppShell } from '@/components/layout/AppShell';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/button';
@@ -13,11 +16,37 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { APP_VERSION, SCHEMA_VERSION } from '@/domain/contracts';
+import { settingsRepository } from '@/data/repositories';
 import { useExport } from '@/hooks/useExport';
 
 export default function SettingsPage() {
   const { t } = useTranslation();
   const { exportData, isExporting } = useExport();
+  const settings = useLiveQuery(() => settingsRepository.get(), []);
+
+  const [farmName, setFarmName] = useState('');
+  const [contactInfo, setContactInfo] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    if (settings) {
+      setFarmName(settings.farmName ?? '');
+      setContactInfo(settings.contactInfo ?? '');
+    }
+  }, [settings]);
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSaving(true);
+    try {
+      await settingsRepository.update({ farmName: farmName.trim(), contactInfo: contactInfo.trim() });
+      toast.success(t('settings.saved'));
+    } catch {
+      toast.error(t('errors.saveFailed'));
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const handleExportAvailability = () => {
     exportData('availability');
@@ -37,22 +66,35 @@ export default function SettingsPage() {
           <CardHeader>
             <CardTitle className="text-base">{t('settings.farmInfo')}</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="farmName">{t('settings.farmName')}</Label>
-              <Input 
-                id="farmName" 
-                placeholder={t('settings.farmNamePlaceholder')} 
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="contact">{t('settings.contact')}</Label>
-              <Input 
-                id="contact" 
-                placeholder={t('settings.contactPlaceholder')} 
-              />
-            </div>
-            <Button className="w-full">{t('actions.save')}</Button>
+          <CardContent>
+            <form onSubmit={handleSave} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="farmName">{t('settings.farmName')}</Label>
+                <Input
+                  id="farmName"
+                  value={farmName}
+                  onChange={(e) => setFarmName(e.target.value)}
+                  placeholder={t('settings.farmNamePlaceholder')}
+                  autoComplete="organization"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="contact">{t('settings.contact')}</Label>
+                <Input
+                  id="contact"
+                  type="tel"
+                  inputMode="tel"
+                  autoComplete="tel"
+                  value={contactInfo}
+                  onChange={(e) => setContactInfo(e.target.value)}
+                  placeholder={t('settings.contactPlaceholder')}
+                />
+              </div>
+              <Button type="submit" className="w-full" disabled={isSaving || !settings}>
+                {isSaving && <Loader2 className="h-4 w-4 mr-2 animate-spin" aria-hidden="true" />}
+                {t('actions.save')}
+              </Button>
+            </form>
           </CardContent>
         </Card>
 
@@ -62,16 +104,16 @@ export default function SettingsPage() {
             <CardTitle className="text-base">{t('settings.dataManagement')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <Button 
-              variant="outline" 
-              className="w-full justify-start gap-3"
+            <Button
+              variant="outline"
+              className="w-full justify-start gap-3 h-auto py-3 whitespace-normal"
               onClick={handleExportAvailability}
               disabled={isExporting}
             >
               {isExporting ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden="true" />
               ) : (
-                <Package className="h-4 w-4" />
+                <Package className="h-4 w-4 shrink-0" aria-hidden="true" />
               )}
               <div className="text-left">
                 <p className="font-medium">{t('export.availabilityPack')}</p>
@@ -80,16 +122,16 @@ export default function SettingsPage() {
                 </p>
               </div>
             </Button>
-            <Button 
-              variant="outline" 
-              className="w-full justify-start gap-3"
+            <Button
+              variant="outline"
+              className="w-full justify-start gap-3 h-auto py-3 whitespace-normal"
               onClick={handleExportFull}
               disabled={isExporting}
             >
               {isExporting ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden="true" />
               ) : (
-                <Archive className="h-4 w-4" />
+                <Archive className="h-4 w-4 shrink-0" aria-hidden="true" />
               )}
               <div className="text-left">
                 <p className="font-medium">{t('export.fullHistory')}</p>
@@ -113,13 +155,13 @@ export default function SettingsPage() {
             </div>
             <Separator />
             <div className="flex items-center justify-between py-2">
-              <span className="text-muted-foreground">Schema</span>
+              <span className="text-muted-foreground">{t('settings.schema')}</span>
               <Badge variant="outline">{SCHEMA_VERSION}</Badge>
             </div>
             <Separator />
-            <div className="flex items-center gap-2 py-2 text-primary">
-              <Wifi className="h-4 w-4" />
-              <span className="text-sm font-medium">{t('settings.offlineReady')}</span>
+            <div className="flex items-center gap-2 py-2 text-muted-foreground">
+              <Smartphone className="h-4 w-4" aria-hidden="true" />
+              <span className="text-sm">{t('settings.localData')}</span>
             </div>
           </CardContent>
         </Card>

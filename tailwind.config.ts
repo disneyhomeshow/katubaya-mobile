@@ -47,6 +47,8 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        // WhatsApp message bubble (preview only)
+        whatsapp: "hsl(var(--whatsapp))",
         // Harvest status colors
         harvest: {
           success: "hsl(var(--harvest-success))",

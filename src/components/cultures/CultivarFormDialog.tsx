@@ -2,11 +2,12 @@
  * Cultivar Form Dialog - Create/Edit cultivars
  */
 
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import {
   Dialog,
   DialogContent,
@@ -30,14 +31,19 @@ import { useCultivars } from '@/hooks';
 import { toast } from 'sonner';
 import type { Cultivar } from '@/domain/contracts/types';
 
-const cultivarFormSchema = z.object({
-  name: z.string().min(1, 'Nome é obrigatório').max(100),
-  shelfLifeDaysOverride: z.number().min(1).max(365).optional().nullable(),
-  useOverride: z.boolean(),
-  notes: z.string().max(500).optional(),
-});
+const buildSchema = (t: TFunction) =>
+  z.object({
+    name: z.string().min(1, t('crops.nameRequired')).max(100),
+    shelfLifeDaysOverride: z.number().min(1).max(365).optional().nullable(),
+    useOverride: z.boolean(),
+    notes: z.string().max(500).optional(),
+  }).superRefine((v, ctx) => {
+    if (v.useOverride && v.shelfLifeDaysOverride == null) {
+      ctx.addIssue({ code: 'custom', path: ['shelfLifeDaysOverride'], message: t('errors.required') });
+    }
+  });
 
-type CultivarFormValues = z.infer<typeof cultivarFormSchema>;
+type CultivarFormValues = z.infer<ReturnType<typeof buildSchema>>;
 
 interface CultivarFormDialogProps {
   open: boolean;
@@ -47,15 +53,16 @@ interface CultivarFormDialogProps {
   defaultShelfLife: number;
 }
 
-export function CultivarFormDialog({ 
-  open, 
-  onOpenChange, 
-  cultivar, 
+export function CultivarFormDialog({
+  open,
+  onOpenChange,
+  cultivar,
   cropId,
-  defaultShelfLife 
+  defaultShelfLife
 }: CultivarFormDialogProps) {
   const { t } = useTranslation();
   const { createCultivar, updateCultivar } = useCultivars(cropId);
+  const cultivarFormSchema = useMemo(() => buildSchema(t), [t]);
 
   const form = useForm<CultivarFormValues>({
     resolver: zodResolver(cultivarFormSchema),
@@ -99,14 +106,14 @@ export function CultivarFormDialog({
 
       if (cultivar) {
         await updateCultivar(cultivar.id, payload);
-        toast.success('Variedade atualizada!');
+        toast.success(t('crops.cultivarUpdated'));
       } else {
         await createCultivar(payload);
-        toast.success('Variedade criada!');
+        toast.success(t('crops.cultivarCreated'));
       }
       onOpenChange(false);
-    } catch (error) {
-      toast.error('Erro', { description: 'Não foi possível salvar a variedade' });
+    } catch {
+      toast.error(t('errors.generic'), { description: t('crops.cultivarSaveError') });
     }
   };
 
@@ -115,7 +122,7 @@ export function CultivarFormDialog({
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>
-            {cultivar ? 'Editar Variedade' : 'Nova Variedade'}
+            {cultivar ? t('crops.editCultivar') : t('crops.addCultivar')}
           </DialogTitle>
         </DialogHeader>
 
@@ -128,7 +135,7 @@ export function CultivarFormDialog({
                 <FormItem>
                   <FormLabel>{t('crops.name')}</FormLabel>
                   <FormControl>
-                    <Input placeholder="Ex: Prata, Nanica..." {...field} />
+                    <Input placeholder={t('crops.cultivarNamePlaceholder')} autoComplete="off" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -141,9 +148,9 @@ export function CultivarFormDialog({
               render={({ field }) => (
                 <FormItem className="flex items-center justify-between rounded-lg border p-3">
                   <div>
-                    <FormLabel className="cursor-pointer">Validade personalizada</FormLabel>
+                    <FormLabel className="cursor-pointer">{t('crops.customShelfLife')}</FormLabel>
                     <FormDescription className="text-xs">
-                      Padrão da cultura: {defaultShelfLife} dias
+                      {t('crops.cropDefault', { count: defaultShelfLife })}
                     </FormDescription>
                   </div>
                   <FormControl>
@@ -162,11 +169,12 @@ export function CultivarFormDialog({
                 name="shelfLifeDaysOverride"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Validade (dias)</FormLabel>
+                    <FormLabel>{t('crops.shelfLife')}</FormLabel>
                     <FormControl>
-                      <Input 
-                        type="number" 
-                        min={1} 
+                      <Input
+                        type="number"
+                        inputMode="numeric"
+                        min={1}
                         max={365}
                         value={field.value ?? ''}
                         onChange={e => field.onChange(parseInt(e.target.value) || null)}
@@ -183,10 +191,10 @@ export function CultivarFormDialog({
               name="notes"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Observações</FormLabel>
+                  <FormLabel>{t('crops.notes')}</FormLabel>
                   <FormControl>
-                    <Textarea 
-                      placeholder="Notas sobre a variedade..."
+                    <Textarea
+                      placeholder={t('crops.cultivarNotesPlaceholder')}
                       className="resize-none"
                       {...field}
                     />
@@ -205,7 +213,7 @@ export function CultivarFormDialog({
               >
                 {t('actions.cancel')}
               </Button>
-              <Button type="submit" className="flex-1">
+              <Button type="submit" className="flex-1" disabled={form.formState.isSubmitting}>
                 {t('actions.save')}
               </Button>
             </div>

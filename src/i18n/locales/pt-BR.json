@@ -27,7 +27,20 @@
     "done": "Concluído",
     "generate": "Gerar",
     "regenerate": "Atualizar",
-    "export": "Exportar"
+    "export": "Exportar",
+    "close": "Fechar",
+    "more": "Mais opções",
+    "increase": "Aumentar",
+    "decrease": "Diminuir",
+    "favorite": "Favoritar",
+    "unfavorite": "Remover dos favoritos",
+    "remove": "Remover",
+    "add": "Adicionar",
+    "openQuickActions": "Abrir ações rápidas",
+    "logHarvestDesc": "Registrar nova colheita",
+    "adjustInventoryDesc": "Ajustar quantidades do estoque",
+    "addCropDesc": "Cadastrar nova cultura",
+    "configureAvailabilityDesc": "Configurar lista de disponibilidade"
   },
   "home": {
     "greeting": "Olá, Agricultor!",
@@ -42,7 +55,9 @@
     "expiringSoon": "Vencendo em Breve",
     "noExpiring": "Nenhum item vencendo",
     "quickActions": "Ações Rápidas",
-    "viewAll": "Ver todos"
+    "viewAll": "Ver todos",
+    "lotsInStock": "Lotes no estoque",
+    "generatedOn": "Gerada em {{date}}"
   },
   "harvest": {
     "title": "Registrar Colheita",
@@ -65,13 +80,17 @@
     "quickAdd": "+1",
     "quickAddHalf": "+0.5",
     "quickAddFive": "+5",
-    "duplicate": "Duplicar"
+    "duplicate": "Duplicar",
+    "stepOf": "Passo {{current}} de {{total}}",
+    "noCultivar": "Sem variedade",
+    "noZone": "Sem zona",
+    "saving": "Salvando...",
+    "noResults": "Nenhuma cultura encontrada"
   },
   "inventory": {
     "title": "Estoque",
     "empty": "Estoque vazio",
     "startHarvesting": "Comece registrando colheitas",
-    "totalItems": "{{count}} itens",
     "lots": "Lotes",
     "lotDetails": "Detalhes do Lote",
     "adjust": "Ajustar",
@@ -88,11 +107,23 @@
       "correction": "Correção",
       "processing": "Processamento"
     },
-    "expiresIn": "Vence em {{days}} dias",
     "expiresToday": "Vence hoje!",
-    "expired": "Vencido há {{days}} dias",
     "totalValue": "Valor total",
-    "pricePerUnit": "R$/{{unit}}"
+    "pricePerUnit": "R$/{{unit}}",
+    "maxRemove": "Máximo: {{max}} {{unit}}",
+    "harvestedOn": "Colhido em {{date}}",
+    "adjusted": "Estoque ajustado",
+    "currentQuantity": "Quantidade atual",
+    "exceedsAvailable": "Informe no máximo {{max}} {{unit}}",
+    "loading": "Carregando estoque...",
+    "totalItems_one": "{{count}} item",
+    "totalItems_other": "{{count}} itens",
+    "lotsCount_one": "{{count}} lote",
+    "lotsCount_other": "{{count}} lotes",
+    "expiresIn_one": "Vence em {{count}} dia",
+    "expiresIn_other": "Vence em {{count}} dias",
+    "expired_one": "Vencido há {{count}} dia",
+    "expired_other": "Vencido há {{count}} dias"
   },
   "availability": {
     "title": "Disponibilidade",
@@ -108,7 +139,6 @@
     "include": "Incluir",
     "exclude": "Excluir",
     "configSaved": "Configurações salvas!",
-    "configFarmInfo": "Informações da Fazenda",
     "configFarmInfoDesc": "Essas informações aparecem na mensagem do WhatsApp",
     "configMessage": "Personalização da Mensagem",
     "configMessageDesc": "Customize o cabeçalho e rodapé da sua lista",
@@ -116,7 +146,15 @@
     "footerText": "Rodapé personalizado",
     "headerTextHint": "Deixe em branco para usar o padrão",
     "footerTextHint": "Ex: horários de entrega, formas de pagamento",
-    "configPreviewHint": "Após salvar, gere uma nova lista para ver as alterações"
+    "configPreviewHint": "Após salvar, gere uma nova lista para ver as alterações",
+    "generated": "Lista gerada",
+    "pasteHint": "Cole no WhatsApp para enviar",
+    "generateHint": "Gere uma lista a partir do seu estoque atual",
+    "includedCount": "{{included}} de {{total}} itens",
+    "headerPlaceholder": "Ex: 🌿 Produtos frescos do sítio",
+    "footerPlaceholder": "Ex: Entregas às terças e sextas",
+    "generateFailed": "Não foi possível gerar a lista. Tente novamente.",
+    "copyFailed": "Não foi possível copiar. Selecione o texto e copie manualmente."
   },
   "crops": {
     "title": "Culturas",
@@ -130,7 +168,38 @@
     "price": "Preço",
     "pricePlaceholder": "Preço por unidade",
     "cultivars": "Variedades",
-    "noCultivars": "Sem variedades cadastradas"
+    "noCultivars": "Sem variedades cadastradas",
+    "all": "Todos",
+    "empty": "Nenhuma cultura cadastrada",
+    "editCrop": "Editar Cultura",
+    "editCultivar": "Editar Variedade",
+    "favorite": "Favorito",
+    "notes": "Observações",
+    "notesPlaceholder": "Notas sobre a cultura...",
+    "cultivarNotesPlaceholder": "Notas sobre a variedade...",
+    "namePlaceholder": "Ex: Banana",
+    "cultivarNamePlaceholder": "Ex: Prata, Nanica...",
+    "selectCategory": "Selecione uma categoria",
+    "customShelfLife": "Validade personalizada",
+    "unit": "Unidade",
+    "shelfLifeLabel": "Validade",
+    "nameRequired": "Informe um nome",
+    "categoryRequired": "Escolha uma categoria",
+    "saveError": "Não foi possível salvar a cultura. Tente novamente.",
+    "cultivarSaveError": "Não foi possível salvar a variedade. Tente novamente.",
+    "created": "Cultura criada",
+    "updated": "Cultura atualizada",
+    "cultivarCreated": "Variedade criada",
+    "cultivarUpdated": "Variedade atualizada",
+    "deleteCrop": "Excluir cultura?",
+    "deleteCropDesc": "Colheitas e lotes já registrados continuam no histórico.",
+    "deleteCultivar": "Excluir variedade?",
+    "deleteCultivarDesc": "Colheitas e lotes já registrados continuam no histórico.",
+    "priceLabel": "Preço (R$)",
+    "shelfLifeDays_one": "{{count}} dia",
+    "shelfLifeDays_other": "{{count}} dias",
+    "cropDefault_one": "Padrão da cultura: {{count}} dia",
+    "cropDefault_other": "Padrão da cultura: {{count}} dias"
   },
   "categories": {
     "fruits": "Frutas",
@@ -158,20 +227,15 @@
     "farmNamePlaceholder": "Ex: Sítio São João",
     "contact": "Contato",
     "contactPlaceholder": "(XX) XXXXX-XXXX",
-    "appearance": "Aparência",
-    "theme": "Tema",
-    "themes": {
-      "light": "Claro",
-      "dark": "Escuro",
-      "system": "Sistema"
-    },
     "language": "Idioma",
     "dataManagement": "Gerenciamento de Dados",
     "exportData": "Exportar Dados",
     "exportDescription": "Baixe todos os seus dados em formato ZIP",
     "about": "Sobre",
     "version": "Versão",
-    "offlineReady": "Pronto para uso offline"
+    "schema": "Esquema de dados",
+    "saved": "Informações salvas",
+    "localData": "Seus dados ficam neste aparelho"
   },
   "export": {
     "title": "Exportar Dados",
@@ -187,7 +251,8 @@
     "generic": "Algo deu errado",
     "notFound": "Não encontrado",
     "required": "Campo obrigatório",
-    "invalidQuantity": "Quantidade inválida"
+    "invalidQuantity": "Quantidade inválida",
+    "saveFailed": "Não foi possível salvar. Tente novamente."
   },
   "confirmation": {
     "delete": "Tem certeza que deseja excluir?",

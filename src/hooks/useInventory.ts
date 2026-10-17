@@ -5,7 +5,7 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/data/db/schema';
 import { inventoryRepository, lotRepository, cropRepository } from '@/data/repositories';
-import type { InventorySnapshot, Lot, AdjustmentReason } from '@/domain/contracts/types';
+import type { AdjustmentReason } from '@/domain/contracts/types';
 import { getExpirationStatus, getDaysUntilExpiry } from '@/domain/rules/expiration';
 
 export function useInventory() {
@@ -23,10 +23,6 @@ export function useInventory() {
     []
   );
 
-  // Get inventory snapshot
-  const generateSnapshot = async (): Promise<InventorySnapshot> => {
-    return inventoryRepository.generateSnapshot();
-  };
 
   // Adjust lot quantity
   const adjustLot = async (
@@ -65,7 +61,6 @@ export function useInventory() {
   return {
     lots: lots ?? [],
     expiringLots: expiringLots ?? [],
-    generateSnapshot,
     adjustLot,
     getLotWithDetails
   };

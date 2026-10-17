@@ -20,12 +20,12 @@ export function ExpirationBadge({ status, daysRemaining, className }: Expiration
 
   const getLabel = () => {
     if (daysRemaining < 0) {
-      return t('inventory.expired', { days: Math.abs(daysRemaining) });
+      return t('inventory.expired', { count: Math.abs(daysRemaining) });
     }
     if (daysRemaining === 0) {
       return t('inventory.expiresToday');
     }
-    return t('inventory.expiresIn', { days: daysRemaining });
+    return t('inventory.expiresIn', { count: daysRemaining });
   };
 
   return (
@@ -35,7 +35,7 @@ export function ExpirationBadge({ status, daysRemaining, className }: Expiration
         colors.bg,
         colors.text,
         colors.border,
-        'border',
+        'border whitespace-nowrap',
         className
       )}
     >

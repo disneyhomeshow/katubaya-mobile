@@ -2,8 +2,8 @@
   "name": "katubaya - Gestão de Colheita",
   "short_name": "katubaya",
   "description": "Aplicativo offline para gestão de colheitas agroflorestais",
-  "theme_color": "#2d5a3d",
-  "background_color": "#f7f5f0",
+  "theme_color": "#f5f4ef",
+  "background_color": "#faf8f5",
   "display": "standalone",
   "orientation": "portrait",
   "scope": "/",
@@ -19,5 +19,6 @@
       "sizes": "512x512",
       "type": "image/png"
     }
-  ]
+  ],
+  "lang": "pt-BR"
 }

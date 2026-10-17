@@ -8,11 +8,11 @@ import { useTranslation } from 'react-i18next';
 import { Check } from 'lucide-react';
 import { AppShell, PageHeader } from '@/components/layout';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useAvailability } from '@/hooks/useAvailability';
+import { availabilityRepository } from '@/data/repositories';
 import { toast } from 'sonner';
 
 export default function AvailabilityConfigPage() {
@@ -20,8 +20,6 @@ export default function AvailabilityConfigPage() {
   const navigate = useNavigate();
   const { config, saveConfig } = useAvailability();
 
-  const [farmName, setFarmName] = useState('');
-  const [contactInfo, setContactInfo] = useState('');
   const [headerText, setHeaderText] = useState('');
   const [footerText, setFooterText] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -29,8 +27,6 @@ export default function AvailabilityConfigPage() {
   // Load existing config
   useEffect(() => {
     if (config) {
-      setFarmName(config.farmName || '');
-      setContactInfo(config.contactInfo || '');
       setHeaderText(config.defaultHeaderText || '');
       setFooterText(config.defaultFooterText || '');
     }
@@ -40,13 +36,14 @@ export default function AvailabilityConfigPage() {
     setIsSubmitting(true);
     try {
       await saveConfig({
-        farmName: farmName || undefined,
-        contactInfo: contactInfo || undefined,
         defaultHeaderText: headerText || undefined,
         defaultFooterText: footerText || undefined
       });
-      toast.success(t('actions.save'), { description: t('availability.configSaved') });
-      navigate('/availability');
+      await availabilityRepository.markCurrentAsStale();
+      toast.success(t('availability.configSaved'));
+      navigate('/availability', { replace: true });
+    } catch {
+      toast.error(t('errors.saveFailed'));
     } finally {
       setIsSubmitting(false);
     }
@@ -59,33 +56,17 @@ export default function AvailabilityConfigPage() {
         showBack
       />
 
-      <div className="p-4 max-w-lg mx-auto space-y-4 pb-24">
-        {/* Farm Info Card */}
+      <div className="p-4 max-w-lg mx-auto space-y-4 pb-28">
+        {/* Farm info lives in Settings — single source of truth */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">{t('availability.configFarmInfo')}</CardTitle>
-            <CardDescription>{t('availability.configFarmInfoDesc')}</CardDescription>
+            <CardTitle className="text-lg">{t('settings.farmInfo')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="farmName">{t('settings.farmName')}</Label>
-              <Input
-                id="farmName"
-                value={farmName}
-                onChange={(e) => setFarmName(e.target.value)}
-                placeholder={t('settings.farmNamePlaceholder')}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="contactInfo">{t('settings.contact')}</Label>
-              <Input
-                id="contactInfo"
-                value={contactInfo}
-                onChange={(e) => setContactInfo(e.target.value)}
-                placeholder={t('settings.contactPlaceholder')}
-              />
-            </div>
+            <p className="text-sm text-muted-foreground">{t('availability.configFarmInfoDesc')}</p>
+            <Button variant="outline" onClick={() => navigate('/settings')}>
+              {t('nav.settings')}
+            </Button>
           </CardContent>
         </Card>
 
@@ -102,7 +83,7 @@ export default function AvailabilityConfigPage() {
                 id="headerText"
                 value={headerText}
                 onChange={(e) => setHeaderText(e.target.value)}
-                placeholder="🌿 Produtos Frescos do Sítio..."
+                placeholder={t('availability.headerPlaceholder')}
                 rows={2}
               />
               <p className="text-xs text-muted-foreground">
@@ -116,7 +97,7 @@ export default function AvailabilityConfigPage() {
                 id="footerText"
                 value={footerText}
                 onChange={(e) => setFooterText(e.target.value)}
-                placeholder="Entregas às terças e sextas..."
+                placeholder={t('availability.footerPlaceholder')}
                 rows={2}
               />
               <p className="text-xs text-muted-foreground">
@@ -132,7 +113,7 @@ export default function AvailabilityConfigPage() {
         </div>
 
         {/* Save Button - Fixed at bottom */}
-        <div className="fixed bottom-20 left-0 right-0 p-4 bg-background/95 backdrop-blur border-t">
+        <div className="fixed bottom-[calc(4rem+var(--safe-area-bottom))] left-0 right-0 p-4 bg-background/95 backdrop-blur border-t">
           <div className="max-w-lg mx-auto">
             <Button 
               onClick={handleSubmit} 

@@ -27,7 +27,20 @@
     "done": "Done",
     "generate": "Generate",
     "regenerate": "Refresh",
-    "export": "Export"
+    "export": "Export",
+    "close": "Close",
+    "more": "More options",
+    "increase": "Increase",
+    "decrease": "Decrease",
+    "favorite": "Add to favorites",
+    "unfavorite": "Remove from favorites",
+    "remove": "Remove",
+    "add": "Add",
+    "openQuickActions": "Open quick actions",
+    "logHarvestDesc": "Log a new harvest",
+    "adjustInventoryDesc": "Adjust stock quantities",
+    "addCropDesc": "Register a new crop",
+    "configureAvailabilityDesc": "Configure the availability list"
   },
   "home": {
     "greeting": "Hello, Farmer!",
@@ -42,7 +55,9 @@
     "expiringSoon": "Expiring Soon",
     "noExpiring": "No items expiring",
     "quickActions": "Quick Actions",
-    "viewAll": "View all"
+    "viewAll": "View all",
+    "lotsInStock": "Lots in stock",
+    "generatedOn": "Generated on {{date}}"
   },
   "harvest": {
     "title": "Log Harvest",
@@ -65,13 +80,17 @@
     "quickAdd": "+1",
     "quickAddHalf": "+0.5",
     "quickAddFive": "+5",
-    "duplicate": "Duplicate"
+    "duplicate": "Duplicate",
+    "stepOf": "Step {{current}} of {{total}}",
+    "noCultivar": "No variety",
+    "noZone": "No zone",
+    "saving": "Saving...",
+    "noResults": "No crops found"
   },
   "inventory": {
     "title": "Inventory",
     "empty": "Inventory is empty",
     "startHarvesting": "Start by logging harvests",
-    "totalItems": "{{count}} items",
     "lots": "Lots",
     "lotDetails": "Lot Details",
     "adjust": "Adjust",
@@ -88,11 +107,23 @@
       "correction": "Correction",
       "processing": "Processing"
     },
-    "expiresIn": "Expires in {{days}} days",
     "expiresToday": "Expires today!",
-    "expired": "Expired {{days}} days ago",
     "totalValue": "Total value",
-    "pricePerUnit": "$/{{unit}}"
+    "pricePerUnit": "$/{{unit}}",
+    "maxRemove": "Maximum: {{max}} {{unit}}",
+    "harvestedOn": "Harvested on {{date}}",
+    "adjusted": "Stock adjusted",
+    "currentQuantity": "Current quantity",
+    "exceedsAvailable": "Enter at most {{max}} {{unit}}",
+    "loading": "Loading stock...",
+    "totalItems_one": "{{count}} item",
+    "totalItems_other": "{{count}} items",
+    "lotsCount_one": "{{count}} lot",
+    "lotsCount_other": "{{count}} lots",
+    "expiresIn_one": "Expires in {{count}} day",
+    "expiresIn_other": "Expires in {{count}} days",
+    "expired_one": "Expired {{count}} day ago",
+    "expired_other": "Expired {{count}} days ago"
   },
   "availability": {
     "title": "Availability",
@@ -108,7 +139,6 @@
     "include": "Include",
     "exclude": "Exclude",
     "configSaved": "Settings saved!",
-    "configFarmInfo": "Farm Information",
     "configFarmInfoDesc": "This information appears in the WhatsApp message",
     "configMessage": "Message Customization",
     "configMessageDesc": "Customize the header and footer of your list",
@@ -116,7 +146,15 @@
     "footerText": "Custom footer",
     "headerTextHint": "Leave blank to use default",
     "footerTextHint": "E.g.: delivery times, payment methods",
-    "configPreviewHint": "After saving, generate a new list to see the changes"
+    "configPreviewHint": "After saving, generate a new list to see the changes",
+    "generated": "List generated",
+    "pasteHint": "Paste it into WhatsApp to send",
+    "generateHint": "Generate a list from your current stock",
+    "includedCount": "{{included}} of {{total}} items",
+    "headerPlaceholder": "e.g. 🌿 Fresh produce from the farm",
+    "footerPlaceholder": "e.g. Deliveries on Tuesdays and Fridays",
+    "generateFailed": "Could not generate the list. Try again.",
+    "copyFailed": "Could not copy. Select the text and copy it manually."
   },
   "crops": {
     "title": "Crops",
@@ -130,7 +168,38 @@
     "price": "Price",
     "pricePlaceholder": "Price per unit",
     "cultivars": "Cultivars",
-    "noCultivars": "No cultivars registered"
+    "noCultivars": "No cultivars registered",
+    "all": "All",
+    "empty": "No crops yet",
+    "editCrop": "Edit Crop",
+    "editCultivar": "Edit Variety",
+    "favorite": "Favorite",
+    "notes": "Notes",
+    "notesPlaceholder": "Notes about the crop...",
+    "cultivarNotesPlaceholder": "Notes about the variety...",
+    "namePlaceholder": "e.g. Banana",
+    "cultivarNamePlaceholder": "e.g. Prata, Nanica...",
+    "selectCategory": "Select a category",
+    "customShelfLife": "Custom shelf life",
+    "unit": "Unit",
+    "shelfLifeLabel": "Shelf life",
+    "nameRequired": "Enter a name",
+    "categoryRequired": "Choose a category",
+    "saveError": "Could not save the crop. Try again.",
+    "cultivarSaveError": "Could not save the variety. Try again.",
+    "created": "Crop created",
+    "updated": "Crop updated",
+    "cultivarCreated": "Variety created",
+    "cultivarUpdated": "Variety updated",
+    "deleteCrop": "Delete crop?",
+    "deleteCropDesc": "Harvests and lots already logged stay in the history.",
+    "deleteCultivar": "Delete variety?",
+    "deleteCultivarDesc": "Harvests and lots already logged stay in the history.",
+    "priceLabel": "Price (R$)",
+    "shelfLifeDays_one": "{{count}} day",
+    "shelfLifeDays_other": "{{count}} days",
+    "cropDefault_one": "Crop default: {{count}} day",
+    "cropDefault_other": "Crop default: {{count}} days"
   },
   "categories": {
     "fruits": "Fruits",
@@ -158,20 +227,15 @@
     "farmNamePlaceholder": "E.g., Green Valley Farm",
     "contact": "Contact",
     "contactPlaceholder": "+1 (555) 123-4567",
-    "appearance": "Appearance",
-    "theme": "Theme",
-    "themes": {
-      "light": "Light",
-      "dark": "Dark",
-      "system": "System"
-    },
     "language": "Language",
     "dataManagement": "Data Management",
     "exportData": "Export Data",
     "exportDescription": "Download all your data as a ZIP file",
     "about": "About",
     "version": "Version",
-    "offlineReady": "Ready for offline use"
+    "schema": "Data schema",
+    "saved": "Information saved",
+    "localData": "Your data stays on this device"
   },
   "export": {
     "title": "Export Data",
@@ -187,7 +251,8 @@
     "generic": "Something went wrong",
     "notFound": "Not found",
     "required": "Required field",
-    "invalidQuantity": "Invalid quantity"
+    "invalidQuantity": "Invalid quantity",
+    "saveFailed": "Could not save. Try again."
   },
   "confirmation": {
     "delete": "Are you sure you want to delete?",

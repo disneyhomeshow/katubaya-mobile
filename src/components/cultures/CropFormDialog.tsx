@@ -2,11 +2,12 @@
  * Crop Form Dialog - Create/Edit crops
  */
 
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import {
   Dialog,
   DialogContent,
@@ -38,17 +39,18 @@ import type { Crop, CropCategory, UnitType } from '@/domain/contracts/types';
 
 const UNIT_OPTIONS: UnitType[] = ['kg', 'g', 'unit', 'bunch', 'liter', 'ml', 'box', 'bag'];
 
-const cropFormSchema = z.object({
-  name: z.string().min(1, 'Nome é obrigatório').max(100),
-  categoryId: z.string().min(1, 'Categoria é obrigatória'),
-  defaultUnit: z.enum(['kg', 'g', 'unit', 'bunch', 'liter', 'ml', 'box', 'bag']),
-  shelfLifeDaysDefault: z.number().min(1).max(365),
-  pricePerUnit: z.number().min(0).optional(),
-  isFavorite: z.boolean(),
-  notes: z.string().max(500).optional(),
-});
+const buildSchema = (t: TFunction) =>
+  z.object({
+    name: z.string().min(1, t('crops.nameRequired')).max(100),
+    categoryId: z.string().min(1, t('crops.categoryRequired')),
+    defaultUnit: z.enum(['kg', 'g', 'unit', 'bunch', 'liter', 'ml', 'box', 'bag']),
+    shelfLifeDaysDefault: z.number().min(1).max(365),
+    pricePerUnit: z.number().min(0).optional(),
+    isFavorite: z.boolean(),
+    notes: z.string().max(500).optional(),
+  });
 
-type CropFormValues = z.infer<typeof cropFormSchema>;
+type CropFormValues = z.infer<ReturnType<typeof buildSchema>>;
 
 interface CropFormDialogProps {
   open: boolean;
@@ -60,6 +62,7 @@ interface CropFormDialogProps {
 export function CropFormDialog({ open, onOpenChange, crop, categories }: CropFormDialogProps) {
   const { t } = useTranslation();
   const { createCrop, updateCrop } = useCrops();
+  const cropFormSchema = useMemo(() => buildSchema(t), [t]);
 
   const form = useForm<CropFormValues>({
     resolver: zodResolver(cropFormSchema),
@@ -111,7 +114,7 @@ export function CropFormDialog({ open, onOpenChange, crop, categories }: CropFor
           isFavorite: data.isFavorite,
           notes: data.notes,
         });
-        toast.success('Cultura atualizada!');
+        toast.success(t('crops.updated'));
       } else {
         await createCrop({
           name: data.name,
@@ -122,11 +125,11 @@ export function CropFormDialog({ open, onOpenChange, crop, categories }: CropFor
           isFavorite: data.isFavorite,
           notes: data.notes,
         });
-        toast.success('Cultura criada!');
+        toast.success(t('crops.created'));
       }
       onOpenChange(false);
-    } catch (error) {
-      toast.error('Erro', { description: 'Não foi possível salvar a cultura' });
+    } catch {
+      toast.error(t('errors.generic'), { description: t('crops.saveError') });
     }
   };
 
@@ -135,7 +138,7 @@ export function CropFormDialog({ open, onOpenChange, crop, categories }: CropFor
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>
-            {crop ? 'Editar Cultura' : 'Nova Cultura'}
+            {crop ? t('crops.editCrop') : t('crops.addCrop')}
           </DialogTitle>
         </DialogHeader>
 
@@ -148,7 +151,7 @@ export function CropFormDialog({ open, onOpenChange, crop, categories }: CropFor
                 <FormItem>
                   <FormLabel>{t('crops.name')}</FormLabel>
                   <FormControl>
-                    <Input placeholder="Ex: Banana" {...field} />
+                    <Input placeholder={t('crops.namePlaceholder')} autoComplete="off" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -164,13 +167,13 @@ export function CropFormDialog({ open, onOpenChange, crop, categories }: CropFor
                   <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Selecione uma categoria" />
+                        <SelectValue placeholder={t('crops.selectCategory')} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent className="bg-popover z-50">
                       {categories.map((cat) => (
                         <SelectItem key={cat.id} value={cat.id}>
-                          {cat.icon} {cat.name}
+                          <span aria-hidden="true">{cat.icon}</span> {cat.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -213,9 +216,10 @@ export function CropFormDialog({ open, onOpenChange, crop, categories }: CropFor
                   <FormItem>
                     <FormLabel>{t('crops.shelfLife')}</FormLabel>
                     <FormControl>
-                      <Input 
-                        type="number" 
-                        min={1} 
+                      <Input
+                        type="number"
+                        inputMode="numeric"
+                        min={1}
                         max={365}
                         {...field}
                         onChange={e => field.onChange(parseInt(e.target.value) || 1)}
@@ -232,10 +236,11 @@ export function CropFormDialog({ open, onOpenChange, crop, categories }: CropFor
               name="pricePerUnit"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t('crops.price')} (R$)</FormLabel>
+                  <FormLabel>{t('crops.priceLabel')}</FormLabel>
                   <FormControl>
-                    <Input 
-                      type="number" 
+                    <Input
+                      type="number"
+                      inputMode="decimal"
                       step="0.01"
                       min={0}
                       placeholder={t('crops.pricePlaceholder')}
@@ -257,7 +262,7 @@ export function CropFormDialog({ open, onOpenChange, crop, categories }: CropFor
               name="isFavorite"
               render={({ field }) => (
                 <FormItem className="flex items-center justify-between rounded-lg border p-3">
-                  <FormLabel className="cursor-pointer">Favorito</FormLabel>
+                  <FormLabel className="cursor-pointer">{t('crops.favorite')}</FormLabel>
                   <FormControl>
                     <Switch
                       checked={field.value}
@@ -273,10 +278,10 @@ export function CropFormDialog({ open, onOpenChange, crop, categories }: CropFor
               name="notes"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Observações</FormLabel>
+                  <FormLabel>{t('crops.notes')}</FormLabel>
                   <FormControl>
-                    <Textarea 
-                      placeholder="Notas sobre a cultura..."
+                    <Textarea
+                      placeholder={t('crops.notesPlaceholder')}
                       className="resize-none"
                       {...field}
                     />
@@ -295,7 +300,7 @@ export function CropFormDialog({ open, onOpenChange, crop, categories }: CropFor
               >
                 {t('actions.cancel')}
               </Button>
-              <Button type="submit" className="flex-1">
+              <Button type="submit" className="flex-1" disabled={form.formState.isSubmitting}>
                 {t('actions.save')}
               </Button>
             </div>

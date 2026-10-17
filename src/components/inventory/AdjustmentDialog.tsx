@@ -2,9 +2,10 @@
  * Adjustment Dialog - Manual inventory adjustment
  */
 
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Minus, Plus } from 'lucide-react';
+import { toast } from 'sonner';
 import {
   Dialog,
   DialogContent,
@@ -53,26 +54,19 @@ export function AdjustmentDialog({
   onAdjust
 }: AdjustmentDialogProps) {
   const { t } = useTranslation();
+  const id = useId();
   const [quantity, setQuantity] = useState('');
   const [isAdding, setIsAdding] = useState(false);
   const [reason, setReason] = useState<AdjustmentReason>('sold');
   const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = async () => {
-    const qty = parseFloat(quantity);
-    if (isNaN(qty) || qty <= 0) return;
-
-    setIsSubmitting(true);
-    try {
-      const delta = isAdding ? qty : -qty;
-      await onAdjust(delta, reason, notes || undefined);
-      onOpenChange(false);
-      resetForm();
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+  const unit = t(`units.${lot.unit}`);
+  const maxRemove = lot.quantityRemaining;
+  const qty = parseFloat(quantity);
+  const hasQty = !isNaN(qty) && qty > 0;
+  const overMax = !isAdding && hasQty && qty > maxRemove;
+  const canSave = hasQty && !overMax && !isSubmitting;
 
   const resetForm = () => {
     setQuantity('');
@@ -81,14 +75,31 @@ export function AdjustmentDialog({
     setNotes('');
   };
 
-  const displayName = cultivar 
-    ? `${crop?.name} - ${cultivar.name}`
-    : crop?.name ?? 'Item';
+  const handleOpenChange = (next: boolean) => {
+    if (!next) resetForm();
+    onOpenChange(next);
+  };
 
-  const maxRemove = lot.quantityRemaining;
+  const handleSubmit = async () => {
+    if (!canSave) return;
+
+    setIsSubmitting(true);
+    try {
+      const delta = isAdding ? qty : -qty;
+      await onAdjust(delta, reason, notes || undefined);
+      handleOpenChange(false);
+    } catch {
+      toast.error(t('errors.saveFailed'));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const cropName = crop?.name ?? t('inventory.unknownCrop');
+  const displayName = cultivar ? `${cropName} - ${cultivar.name}` : cropName;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{t('inventory.adjustTitle')}</DialogTitle>
@@ -99,7 +110,7 @@ export function AdjustmentDialog({
           <div className="bg-muted/50 rounded-lg p-3">
             <p className="font-medium">{displayName}</p>
             <p className="text-sm text-muted-foreground">
-              {t('inventory.lots')}: {lot.quantityRemaining} {lot.unit}
+              {t('inventory.currentQuantity')}: {lot.quantityRemaining} {unit}
             </p>
           </div>
 
@@ -109,26 +120,29 @@ export function AdjustmentDialog({
               type="button"
               variant={!isAdding ? 'default' : 'outline'}
               className="flex-1"
+              aria-pressed={!isAdding}
               onClick={() => setIsAdding(false)}
             >
-              <Minus className="h-4 w-4 mr-2" />
-              Remover
+              <Minus className="h-4 w-4" aria-hidden="true" />
+              {t('actions.remove')}
             </Button>
             <Button
               type="button"
               variant={isAdding ? 'default' : 'outline'}
               className="flex-1"
+              aria-pressed={isAdding}
               onClick={() => setIsAdding(true)}
             >
-              <Plus className="h-4 w-4 mr-2" />
-              Adicionar
+              <Plus className="h-4 w-4" aria-hidden="true" />
+              {t('actions.add')}
             </Button>
           </div>
 
           {/* Quantity */}
           <div className="space-y-2">
-            <Label>{t('harvest.quantity')} ({lot.unit})</Label>
+            <Label htmlFor={`${id}-quantity`}>{t('harvest.quantity')} ({unit})</Label>
             <Input
+              id={`${id}-quantity`}
               type="number"
               inputMode="decimal"
               step="0.1"
@@ -138,19 +152,27 @@ export function AdjustmentDialog({
               onChange={(e) => setQuantity(e.target.value)}
               placeholder="0"
               className="text-lg"
+              aria-invalid={overMax || undefined}
+              aria-describedby={!isAdding ? `${id}-quantity-hint` : undefined}
             />
             {!isAdding && (
-              <p className="text-xs text-muted-foreground">
-                Máximo: {maxRemove} {lot.unit}
+              <p
+                id={`${id}-quantity-hint`}
+                aria-live="polite"
+                className={overMax ? 'text-sm text-destructive' : 'text-sm text-muted-foreground'}
+              >
+                {overMax
+                  ? t('inventory.exceedsAvailable', { max: maxRemove, unit })
+                  : t('inventory.maxRemove', { max: maxRemove, unit })}
               </p>
             )}
           </div>
 
           {/* Reason */}
           <div className="space-y-2">
-            <Label>{t('inventory.adjustReason')}</Label>
+            <Label htmlFor={`${id}-reason`}>{t('inventory.adjustReason')}</Label>
             <Select value={reason} onValueChange={(v) => setReason(v as AdjustmentReason)}>
-              <SelectTrigger>
+              <SelectTrigger id={`${id}-reason`}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -165,8 +187,9 @@ export function AdjustmentDialog({
 
           {/* Notes */}
           <div className="space-y-2">
-            <Label>{t('harvest.notes')}</Label>
+            <Label htmlFor={`${id}-notes`}>{t('harvest.notes')}</Label>
             <Textarea
+              id={`${id}-notes`}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder={t('harvest.notesPlaceholder')}
@@ -176,13 +199,10 @@ export function AdjustmentDialog({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>
             {t('actions.cancel')}
           </Button>
-          <Button 
-            onClick={handleSubmit}
-            disabled={isSubmitting || !quantity || parseFloat(quantity) <= 0}
-          >
+          <Button type="button" onClick={handleSubmit} disabled={!canSave}>
             {t('actions.save')}
           </Button>
         </DialogFooter>

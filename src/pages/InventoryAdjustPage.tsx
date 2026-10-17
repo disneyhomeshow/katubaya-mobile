@@ -34,7 +34,7 @@ export default function InventoryAdjustPage() {
   const [selectedLot, setSelectedLot] = useState<LotWithDetails | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  // Get all active lots with crop details
+  // Get all active lots with crop details, grouped by crop id
   const lotsWithDetails = useLiveQuery(async () => {
     const lots = await lotRepository.getActive();
     const crops = await db.crops.toArray();
@@ -43,7 +43,6 @@ export default function InventoryAdjustPage() {
     const cropsMap = new Map(crops.map(c => [c.id, c]));
     const cultivarsMap = new Map(cultivars.map(c => [c.id, c]));
 
-    // Group by crop
     const grouped = lots.reduce((acc, lot) => {
       const crop = cropsMap.get(lot.cropId);
       const cultivar = lot.cultivarId ? cultivarsMap.get(lot.cultivarId) : undefined;
@@ -59,7 +58,7 @@ export default function InventoryAdjustPage() {
       return acc;
     }, {} as Record<string, { crop?: Crop; lots: LotWithDetails[] }>);
 
-    return Object.values(grouped);
+    return Object.entries(grouped);
   }, [], []);
 
   const handleSelectLot = (lotWithDetails: LotWithDetails) => {
@@ -72,7 +71,7 @@ export default function InventoryAdjustPage() {
     
     await adjustLot(selectedLot.lot.id, delta, reason, notes);
     
-    toast.success(t('inventory.adjustTitle'), {
+    toast.success(t('inventory.adjusted'), {
       description: delta < 0 ? t('inventory.reasons.' + reason) : t('inventory.reasons.correction'),
     });
   };
@@ -86,17 +85,17 @@ export default function InventoryAdjustPage() {
         showBack
       />
 
-      <div className="flex-1 overflow-auto px-4 pb-6">
+      <div className="flex-1 overflow-auto p-4 max-w-lg mx-auto w-full">
         {isEmpty ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">
-            <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center mb-4">
+            <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center mb-4" aria-hidden="true">
               <Package className="h-8 w-8 text-muted-foreground" />
             </div>
             <h3 className="font-medium text-lg mb-1">{t('inventory.empty')}</h3>
             <p className="text-muted-foreground text-sm mb-4">
               {t('inventory.startHarvesting')}
             </p>
-            <Button onClick={() => navigate('/harvest/new')}>
+            <Button type="button" onClick={() => navigate('/harvest/new')}>
               {t('actions.logHarvest')}
             </Button>
           </div>
@@ -106,8 +105,8 @@ export default function InventoryAdjustPage() {
               {t('inventory.selectLotToAdjust')}
             </p>
             
-            {lotsWithDetails?.map((group, groupIndex) => (
-              <Card key={groupIndex}>
+            {lotsWithDetails?.map(([cropId, group]) => (
+              <Card key={cropId}>
                 <CardContent className="p-4">
                   <h3 className="font-medium text-lg mb-3 flex items-center gap-2">
                     {group.crop?.name || t('inventory.unknownCrop')}
@@ -121,23 +120,24 @@ export default function InventoryAdjustPage() {
                       return (
                         <button
                           key={lot.id}
+                          type="button"
                           onClick={() => handleSelectLot({ lot, crop, cultivar })}
                           className={cn(
-                            'w-full flex items-center justify-between p-3 rounded-lg text-left transition-colors',
-                            'bg-muted/50 hover:bg-muted',
+                            'w-full flex items-center justify-between gap-2 p-3 rounded-lg text-left transition-colors',
+                            'bg-muted/50 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                             status === 'expired' && 'border border-harvest-expired/30',
                             status === 'expiring_soon' && 'border border-harvest-warning/30'
                           )}
                         >
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
+                            <div className="flex flex-wrap items-baseline gap-x-2">
                               {cultivar && (
-                                <span className="text-sm text-muted-foreground">
+                                <span className="text-sm text-muted-foreground truncate min-w-0 max-w-full">
                                   {cultivar.name}
                                 </span>
                               )}
-                              <span className="font-medium">
-                                {lot.quantityRemaining} {lot.unit}
+                              <span className="font-medium whitespace-nowrap">
+                                {lot.quantityRemaining} {t(`units.${lot.unit}`)}
                               </span>
                             </div>
                             <div className="flex items-center gap-2 mt-1">
@@ -149,10 +149,10 @@ export default function InventoryAdjustPage() {
                           </div>
                           
                           {status === 'expiring_soon' && (
-                            <AlertTriangle className="h-4 w-4 text-harvest-warning flex-shrink-0" />
+                            <AlertTriangle className="h-4 w-4 text-harvest-warning shrink-0" aria-hidden="true" />
                           )}
                           {status === 'expired' && (
-                            <AlertTriangle className="h-4 w-4 text-harvest-expired flex-shrink-0" />
+                            <AlertTriangle className="h-4 w-4 text-harvest-expired shrink-0" aria-hidden="true" />
                           )}
                         </button>
                       );

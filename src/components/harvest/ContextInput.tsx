@@ -16,6 +16,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 
+// Radix Select rejects value="" on items; sentinel for "no zone"
+const NONE = 'none';
+
 interface ContextInputProps {
   zones: Zone[];
   zoneId?: string;
@@ -36,17 +39,22 @@ export function ContextInput({
   onNotesChange,
 }: ContextInputProps) {
   const { t } = useTranslation();
+  // Local yyyy-mm-dd; toISOString() would roll to tomorrow after 21:00 in UTC-3
+  const today = new Date().toLocaleDateString('en-CA');
 
   return (
-    <div className="flex flex-col h-full px-4 py-6 space-y-6">
+    <div className="flex flex-col h-full px-4 py-6 space-y-6 overflow-y-auto">
       {/* Date Input */}
       <div className="space-y-2">
-        <Label className="flex items-center gap-2">
+        <Label htmlFor="harvest-date" className="flex items-center gap-2">
           <Calendar className="h-4 w-4 text-muted-foreground" />
           {t('harvest.date')}
         </Label>
         <Input
+          id="harvest-date"
           type="date"
+          required
+          max={today}
           value={harvestDate}
           onChange={(e) => onDateChange(e.target.value)}
           className="h-12"
@@ -56,19 +64,19 @@ export function ContextInput({
       {/* Zone Selection */}
       {zones.length > 0 && (
         <div className="space-y-2">
-          <Label className="flex items-center gap-2">
+          <Label htmlFor="harvest-zone" className="flex items-center gap-2">
             <MapPin className="h-4 w-4 text-muted-foreground" />
             {t('harvest.zone')}
           </Label>
           <Select
-            value={zoneId || ''}
-            onValueChange={(val) => onZoneChange(val || undefined)}
+            value={zoneId ?? NONE}
+            onValueChange={(val) => onZoneChange(val === NONE ? undefined : val)}
           >
-            <SelectTrigger className="h-12">
+            <SelectTrigger id="harvest-zone" className="h-12">
               <SelectValue placeholder={t('harvest.zone')} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">—</SelectItem>
+              <SelectItem value={NONE}>{t('harvest.noZone')}</SelectItem>
               {zones.map((zone) => (
                 <SelectItem key={zone.id} value={zone.id}>
                   {zone.name}
@@ -81,11 +89,12 @@ export function ContextInput({
 
       {/* Notes */}
       <div className="space-y-2 flex-1">
-        <Label className="flex items-center gap-2">
+        <Label htmlFor="harvest-notes" className="flex items-center gap-2">
           <FileText className="h-4 w-4 text-muted-foreground" />
           {t('harvest.notes')}
         </Label>
         <Textarea
+          id="harvest-notes"
           value={notes}
           onChange={(e) => onNotesChange(e.target.value)}
           placeholder={t('harvest.notesPlaceholder')}

@@ -15,31 +15,34 @@
     --popover: 45 25% 95%;
     --popover-foreground: 140 30% 15%;
 
-    --primary: 140 45% 35%;
+    --primary: 140 45% 31%;
     --primary-foreground: 45 30% 97%;
 
     --secondary: 45 40% 88%;
     --secondary-foreground: 140 30% 20%;
 
     --muted: 45 20% 90%;
-    --muted-foreground: 140 15% 40%;
+    --muted-foreground: 140 15% 37%;
 
-    --accent: 80 50% 45%;
-    --accent-foreground: 45 30% 97%;
+    --accent: 80 40% 90%;
+    --accent-foreground: 140 30% 15%;
 
-    --destructive: 0 70% 50%;
+    --destructive: 0 70% 45%;
     --destructive-foreground: 45 30% 97%;
 
     --border: 140 20% 85%;
-    --input: 140 20% 85%;
-    --ring: 140 45% 35%;
+    --input: 140 12% 53%;
+    --ring: 140 45% 31%;
 
     --radius: 0.75rem;
 
     /* Harvest status colors */
-    --harvest-success: 140 60% 40%;
-    --harvest-warning: 40 90% 50%;
-    --harvest-expired: 0 70% 50%;
+    --harvest-success: 140 60% 28%;
+    --harvest-warning: 40 90% 28%;
+    --harvest-expired: 0 70% 45%;
+
+    /* WhatsApp bubble, preview only */
+    --whatsapp: 94 78% 87%;
 
     /* Safe area for mobile */
     --safe-area-top: env(safe-area-inset-top, 0px);
@@ -65,19 +68,21 @@
     --muted: 140 15% 18%;
     --muted-foreground: 45 15% 60%;
 
-    --accent: 80 45% 45%;
-    --accent-foreground: 45 30% 97%;
+    --accent: 80 20% 22%;
+    --accent-foreground: 45 30% 95%;
 
-    --destructive: 0 60% 45%;
-    --destructive-foreground: 45 30% 97%;
+    --destructive: 0 65% 69%;
+    --destructive-foreground: 140 30% 10%;
 
     --border: 140 15% 22%;
-    --input: 140 15% 22%;
+    --input: 140 12% 39%;
     --ring: 80 50% 55%;
 
     --harvest-success: 140 50% 50%;
     --harvest-warning: 40 80% 55%;
-    --harvest-expired: 0 60% 55%;
+    --harvest-expired: 0 65% 69%;
+
+    --whatsapp: 169 100% 18%;
   }
 }
 
@@ -89,13 +94,25 @@
   body {
     @apply bg-background text-foreground antialiased;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-    padding-top: var(--safe-area-top);
-    padding-bottom: var(--safe-area-bottom);
   }
 
-  /* Mobile-first touch targets */
-  button, a, [role="button"] {
+  /* Mobile-first touch targets (HIG: 44x44 default) */
+  button:not([role="switch"]), a, [role="button"] {
     @apply min-h-[44px] min-w-[44px];
+  }
+
+  /* One keyboard focus ring for every control, including hand-rolled buttons */
+  button:focus-visible, a:focus-visible, [role="button"]:focus-visible, [role="switch"]:focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
+
+  /* Reduce Motion: keep state changes, drop the choreography */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
   }
 }
 

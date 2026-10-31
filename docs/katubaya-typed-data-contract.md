@@ -46,6 +46,8 @@ availability-pack/
     lots.json
     inventory_adjustments.json
     availability_list.json
+    animal-groups.json          # 1.1.0, full_history only (app writes JSON under data/)
+    animal-adjustments.json     # 1.1.0, full_history only
   csv/
     crops.csv
     cultivars.csv
@@ -55,6 +57,8 @@ availability-pack/
     inventory_adjustments.csv
     availability_items.csv
     availability_windows.csv
+    animal-groups.csv           # 1.1.0, full_history only
+    animal-adjustments.csv      # 1.1.0, full_history only
   media/               # optional (reserved for future)
     ...
 ```
@@ -83,6 +87,7 @@ export type CropId = Brand<string, "CropId">;
 export type CultivarId = Brand<string, "CultivarId">;
 export type HarvestEventId = Brand<string, "HarvestEventId">;
 export type LotId = Brand<string, "LotId">;
+export type AnimalGroupId = Brand<string, "AnimalGroupId">;
 export type AvailabilityListId = Brand<string, "AvailabilityListId">;
 
 // ISO date-time string
@@ -111,7 +116,8 @@ export type Unit =
   | "tray"
   | "box"
   | "liter"
-  | "ml";
+  | "ml"
+  | "dozen"; // 1.1.0: eggs
 
 export type InventoryAdjustmentReason =
   | "loss"
@@ -232,6 +238,7 @@ export interface HarvestEvent {
   unit: Unit;
   notes?: string;
   context?: ContextSnapshot;
+  animalGroupId?: AnimalGroupId; // 1.1.0: milking, egg collection, slaughter — which animal lot produced it
 }
 
 export interface Lot {
@@ -258,6 +265,7 @@ export interface InventoryAdjustment {
   reason: InventoryAdjustmentReason;
   notes?: string;
   context?: ContextSnapshot;
+  harvestEventId?: HarvestEventId; // 1.1.0: reason "processing" — the production this lot was turned into
 }
 
 // Optional materialized view for UI speed and exports
@@ -274,6 +282,44 @@ export interface InventorySnapshot {
       expiresAtEstimate?: IsoDateTime;
     }>;
   }>;
+}
+```
+
+### 2.4b Livestock
+
+> Added in 1.1.0. An animal lot ("lote de animais") is a group of animals managed together; its
+> headcount changes only through adjustments. Production from it (milk, eggs, meat) is a
+> `HarvestEvent` carrying `animalGroupId`. Mirrors `src/domain/contracts/types.ts`; `BaseEntity`
+> is `{ id: string; createdAt: string; updatedAt: string }` (ISO 8601).
+
+```ts
+export type Species = 'cattle' | 'poultry' | 'swine' | 'goat' | 'sheep' | 'bees' | 'fish' | 'other';
+
+export type AnimalAdjustmentReason =
+  | 'birth'
+  | 'purchase'
+  | 'death'
+  | 'sale'
+  | 'slaughter'
+  | 'correction';
+
+export interface AnimalGroup extends BaseEntity {
+  name: string;
+  species: Species;
+  initialHeadcount: number;
+  headcount: number; // current heads; 0 = closed lot
+  zoneId?: string;
+  startedAt: string;
+  notes?: string;
+}
+
+export interface AnimalAdjustment extends BaseEntity {
+  groupId: string;
+  delta: number; // negative for exits
+  reason: AnimalAdjustmentReason;
+  notes?: string;
+  harvestEventId?: string; // slaughter: the meat harvest it produced
+  adjustedAt: string;
 }
 ```
 
@@ -325,7 +371,7 @@ export interface ExportChecksums {
 }
 
 export interface AvailabilityPackManifest {
-  schemaVersion: string;     // "1.0.0"
+  schemaVersion: string;     // "1.1.0"
   exportedAt: IsoDateTime;
   appVersion: string;        // katubaya app version
   packId: string;            // uuid
@@ -374,7 +420,7 @@ export const IsoDateTimeSchema = z.string().datetime(); // refine if needed
 export const DecimalStringSchema = z.string().regex(/^-?\d+(\.\d+)?$/);
 
 export const UnitSchema = z.enum([
-  "kg","g","unit","bunch","bag","tray","box","liter","ml"
+  "kg","g","unit","bunch","bag","tray","box","liter","ml","dozen"
 ]);
 
 // Example: Crop schema (partial)
@@ -398,7 +444,7 @@ export const CropSchema = z.object({
 ```json
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://katubaya.example/schemas/availability-pack/1.0.0.json",
+  "$id": "https://katubaya.example/schemas/availability-pack/1.1.0.json",
   "title": "AvailabilityPack",
   "type": "object",
   "required": ["manifest", "farmer", "catalog", "sites", "zones", "harvestEvents", "lots", "inventoryAdjustments", "availabilityList"],
@@ -411,6 +457,8 @@ export const CropSchema = z.object({
     "harvestEvents": { "type": "array", "items": { "$ref": "harvest-event.schema.json" } },
     "lots": { "type": "array", "items": { "$ref": "lot.schema.json" } },
     "inventoryAdjustments": { "type": "array", "items": { "$ref": "inventory-adjustment.schema.json" } },
+    "animalGroups": { "type": "array", "items": { "$ref": "animal-group.schema.json" } },
+    "animalAdjustments": { "type": "array", "items": { "$ref": "animal-adjustment.schema.json" } },
     "inventorySnapshot": { "$ref": "inventory-snapshot.schema.json" },
     "availabilityList": { "$ref": "availability-list.schema.json" }
   },
@@ -450,6 +498,7 @@ export const CropSchema = z.object({
 - ISO datetimes in UTC (`Z`) recommended
 - `DecimalString` columns stored as strings (don’t force locale decimals)
 - IDs are stable strings
+- The current exporter writes each entity's field names as-is (camelCase, e.g. `cropId`) under `csv/<table>.csv` with hyphenated file names (`animal-groups.csv`); the snake_case tables below describe the target contract for bridges, not today's dump
 
 ### 5.1 `crops.csv`
 | column | required | type | notes |
@@ -549,13 +598,38 @@ export const CropSchema = z.object({
 | price_minor |  | int | optional |
 | notes |  | string | |
 
+### 5.9 `animal-groups.csv` (1.1.0, full_history only)
+| column | required | type | notes |
+|---|---:|---|---|
+| animal_group_id | ✅ | string | matches `AnimalGroup.id` |
+| name | ✅ | string | |
+| species | ✅ | enum | cattle/poultry/swine/goat/sheep/bees/fish/other |
+| initial_headcount | ✅ | int | heads when the lot was opened |
+| headcount | ✅ | int | current heads; 0 = closed lot |
+| zone_id |  | string | |
+| started_at | ✅ | IsoDateTime | |
+| created_at | ✅ | IsoDateTime | |
+| notes |  | string | |
+
+### 5.10 `animal-adjustments.csv` (1.1.0, full_history only)
+| column | required | type | notes |
+|---|---:|---|---|
+| adjustment_id | ✅ | string | |
+| animal_group_id | ✅ | string | |
+| adjusted_at | ✅ | IsoDateTime | |
+| created_at | ✅ | IsoDateTime | |
+| delta | ✅ | int | signed; negative for exits |
+| reason | ✅ | enum | birth/purchase/death/sale/slaughter/correction |
+| harvest_event_id |  | string | slaughter: the meat harvest it produced |
+| notes |  | string | |
+
 ---
 
 ## 6) Minimal example (Availability Pack JSON)
 ```json
 {
   "manifest": {
-    "schemaVersion": "1.0.0",
+    "schemaVersion": "1.1.0",
     "exportedAt": "2026-01-18T12:00:00Z",
     "appVersion": "0.1.0",
     "packId": "7f9c8c2a-1d7e-4b9b-9d9c-7a2b0d7c0a11"
@@ -594,5 +668,5 @@ export const CropSchema = z.object({
 
 ## 8) Change log template (keep contracts honest)
 - **[1.0.0]** initial MVP export contracts
-- **[1.1.0]** add optional `media` references, no breaking changes
+- **[1.1.0]** 2026-10-30 — livestock: animal lots, processing link, dozen unit, animal category type
 - **[2.0.0]** breaking rename: `HarvestEvent.occurredAt` → `harvestedAt`

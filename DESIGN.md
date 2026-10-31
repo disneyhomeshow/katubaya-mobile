@@ -49,8 +49,9 @@ foundations (accessibility, color, typography, layout, writing), not as native c
   (`modality.md`, `alerts.md`).
 - Safe areas, 44 pt targets, one-handed reach: primary actions sit mid-screen or lower
   (`designing-for-ios.md › Best practices`, `layout.md › Guides and safe areas`).
-- Appearance follows the system. There is no in-app theme switch
-  (`dark-mode.md › Best practices`).
+- Appearance follows the system by default. Settings offers an explicit override (Sistema /
+  Claro / Escuro); see §11 for why that is a deliberate deviation from
+  `dark-mode.md › Best practices`.
 
 Current layouts target the compact width class (phones). Tablet and desktop widths reuse the
 same layout centered at `max-w-lg`; a sidebar conversion is future work.
@@ -186,6 +187,7 @@ never by hard-coding colors inside a page.
 | Lists of records | `Card` rows | Name, then one meta line, then status chips; chevron only when it opens something |
 | Status | `ExpirationBadge` / `Badge variant="outline"` with a status token | Text always present |
 | Filters | Chip buttons (`<button aria-pressed>` styled with `badgeVariants`) | Never a `div` with `onClick` |
+| One choice among 2 to 5 options | `ToggleGroup type="single"` (segmented) | Icon + label on every segment; selected segment filled with `primary` and semibold (`toggles.md › Best practices`: state never by color alone) |
 | Feedback | `sonner` toasts: `toast.success` / `toast.error` | One sentence; description says the next step ("Cole no WhatsApp para enviar") |
 | Loading | Skeleton cards or a spinner inside the content area | Never block the whole screen |
 | Empty | Icon, one line, one button for the next step | `writing.md › Provide clear next steps on any blank screens` |
@@ -250,6 +252,9 @@ bank (`writing.md › Getting started`).
 - **Plurals** use i18next suffixes and `count`: `t('inventory.expiresIn', { count: days })`
   with `expiresIn_one` / `expiresIn_other` in both locales. Never "1 dias".
 - Interpolate, do not concatenate.
+- **Vocabulary:** "Produto" for anything the farm sells (plant or animal), "Produção" for the
+  event that creates stock (colheita, ordenha, coleta, abate), "Lote" for a product batch,
+  "Lote de animais" for a herd group.
 - **Claims must be true.** "Pronto para uso offline" was replaced by "Seus dados ficam neste
   aparelho" until a service worker exists (`design-principles.md › Responsibility`).
 
@@ -272,8 +277,13 @@ Every change ships with all of these true (`accessibility.md`):
 ## 11. Dark mode
 
 Appearance follows the system through `next-themes` (`attribute="class"`,
-`defaultTheme="system"`). There is no in-app toggle (`dark-mode.md › Best practices`). Both
-palettes are defined in `src/index.css`; test every screen in both. Whites are softened
+`defaultTheme="system"`). Settings › Aparência offers an explicit override as a three-way
+segmented choice: Sistema (default), Claro, Escuro. This is a **deliberate deviation**:
+`dark-mode.md › Best practices` says to avoid an app-specific appearance setting, and
+`settings.md › Best practices` says to avoid redundant versions of systemwide settings. The
+product owner asked for the override; the design limits the damage by keeping Sistema as the
+default, labelling the choice as applying to this app only, and never adding a second place
+to change it. Both palettes are defined in `src/index.css`; test every screen in both. Whites are softened
 (`#f6f4ee`, never pure white), overlays are `bg-black/80`, and the WhatsApp bubble has its own
 dark value so the preview still reads like WhatsApp.
 
@@ -308,6 +318,16 @@ tints, rows dimmed with `opacity` over live controls, invalid HTML inside button
 headings, a drawer that vanished mid-animation, a future harvest date accepted by the wizard,
 and the duplicate-harvest flow losing its unit. Rating after: Good. Verified in the browser at
 375 px in both appearances.
+
+**2026-10-17, appearance override.** Added Settings › Aparência (Sistema / Claro / Escuro) at
+the owner's request, documented as a deliberate deviation in §11.
+
+**2026-10-30, livestock expansion.** The farm now has animals: an `animal` category type,
+animal lots ("lote de animais") with a headcount and an adjustment log, a "lote de animais"
+origin field in the harvest wizard for animal products, processing that turns stock into
+another product FIFO, a `dozen` unit, and zones editable in Settings. The same components
+carry it (Dialog forms, AlertDialog deletes, Select with a sentinel, lucide species icons),
+so no new tokens or patterns were introduced.
 
 Open: a designed app icon; a service worker before claiming offline readiness; a language
 selector in Settings (dates still use pt-BR patterns until then); tablet/desktop sidebar

@@ -4,7 +4,7 @@
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Wheat, PackageMinus, Leaf, Settings2, X } from 'lucide-react';
+import { Plus, Wheat, PackageMinus, Leaf, PawPrint, Settings2, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -41,6 +41,12 @@ export function FABMenu() {
       label: t('actions.addCrop'),
       description: t('actions.addCropDesc'),
       onClick: () => navigate('/cultures?new=1'),
+    },
+    {
+      icon: PawPrint,
+      label: t('actions.animalLots'),
+      description: t('actions.animalLotsDesc'),
+      onClick: () => navigate('/cultures?tab=animals'),
     },
     {
       icon: Settings2,

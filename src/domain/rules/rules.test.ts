@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { generateAvailabilityMessage } from './availability';
 import { getExpirationStatus } from './expiration';
+import { getCropEmoji } from './availability';
+import { planFifoConsumption, InsufficientStockError } from './processing';
 
 const inDays = (n: number) => new Date(Date.now() + n * 86_400_000);
 
@@ -12,6 +14,33 @@ describe('getExpirationStatus', () => {
     expect(getExpirationStatus(inDays(1))).toBe('expiring_soon');
     expect(getExpirationStatus(inDays(0))).toBe('expired');
     expect(getExpirationStatus(inDays(-1))).toBe('expired');
+  });
+});
+
+describe('planFifoConsumption', () => {
+  const lots = [
+    { id: 'new', quantityRemaining: 10, expiresAtEstimate: '2026-11-20T00:00:00.000Z' },
+    { id: 'old', quantityRemaining: 4, expiresAtEstimate: '2026-11-10T00:00:00.000Z' },
+    { id: 'empty', quantityRemaining: 0, expiresAtEstimate: '2026-11-01T00:00:00.000Z' },
+  ];
+
+  it('consumes the closest expiry first and spills into the next lot', () => {
+    expect(planFifoConsumption(lots, 6)).toEqual([
+      { lotId: 'old', quantity: 4 },
+      { lotId: 'new', quantity: 2 },
+    ]);
+  });
+
+  it('refuses when stock is short, naming the gap', () => {
+    expect(() => planFifoConsumption(lots, 15)).toThrow(InsufficientStockError);
+  });
+});
+
+describe('getCropEmoji', () => {
+  it('matches on the crop name containing the key, not the reverse', () => {
+    expect(getCropEmoji('Mel')).toBe('🍯');
+    expect(getCropEmoji('Melancia')).toBe('🍉');
+    expect(getCropEmoji('Ovos Caipiras')).toBe('🥚');
   });
 });
 

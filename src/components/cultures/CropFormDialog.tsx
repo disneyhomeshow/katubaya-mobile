@@ -37,13 +37,13 @@ import { useCrops } from '@/hooks';
 import { toast } from 'sonner';
 import type { Crop, CropCategory, UnitType } from '@/domain/contracts/types';
 
-const UNIT_OPTIONS: UnitType[] = ['kg', 'g', 'unit', 'bunch', 'liter', 'ml', 'box', 'bag'];
+const UNIT_OPTIONS: UnitType[] = ['kg', 'g', 'unit', 'dozen', 'bunch', 'liter', 'ml', 'box', 'bag'];
 
 const buildSchema = (t: TFunction) =>
   z.object({
     name: z.string().min(1, t('crops.nameRequired')).max(100),
     categoryId: z.string().min(1, t('crops.categoryRequired')),
-    defaultUnit: z.enum(['kg', 'g', 'unit', 'bunch', 'liter', 'ml', 'box', 'bag']),
+    defaultUnit: z.enum(['kg', 'g', 'unit', 'dozen', 'bunch', 'liter', 'ml', 'box', 'bag']),
     shelfLifeDaysDefault: z.number().min(1).max(365),
     pricePerUnit: z.number().min(0).optional(),
     isFavorite: z.boolean(),

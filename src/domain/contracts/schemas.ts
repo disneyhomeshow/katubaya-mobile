@@ -16,6 +16,7 @@ export const CropCategoryTypeSchema = z.enum([
   'herbs',
   'nuts',
   'roots',
+  'animal',
   'custom'
 ]);
 
@@ -27,7 +28,8 @@ export const UnitTypeSchema = z.enum([
   'liter',
   'ml',
   'box',
-  'bag'
+  'bag',
+  'dozen'
 ]);
 
 export const AdjustmentReasonSchema = z.enum([
@@ -105,7 +107,8 @@ export const HarvestEventSchema = BaseEntitySchema.extend({
   unit: UnitTypeSchema,
   harvestedAt: z.string().datetime(),
   notes: z.string().max(500).optional(),
-  lotId: z.string().uuid()
+  lotId: z.string().uuid(),
+  animalGroupId: z.string().uuid().optional()
 });
 
 export const LotSchema = BaseEntitySchema.extend({
@@ -132,6 +135,29 @@ export const InventoryAdjustmentSchema = BaseEntitySchema.extend({
   unit: UnitTypeSchema,
   reason: AdjustmentReasonSchema,
   notes: z.string().max(500).optional(),
+  adjustedAt: z.string().datetime(),
+  harvestEventId: z.string().uuid().optional()
+});
+
+export const SpeciesSchema = z.enum(['cattle', 'poultry', 'swine', 'goat', 'sheep', 'bees', 'fish', 'other']);
+export const AnimalAdjustmentReasonSchema = z.enum(['birth', 'purchase', 'death', 'sale', 'slaughter', 'correction']);
+
+export const AnimalGroupSchema = BaseEntitySchema.extend({
+  name: z.string().min(1).max(100),
+  species: SpeciesSchema,
+  initialHeadcount: z.number().int().min(0),
+  headcount: z.number().int().min(0),
+  zoneId: z.string().uuid().optional(),
+  startedAt: z.string().datetime(),
+  notes: z.string().max(500).optional()
+});
+
+export const AnimalAdjustmentSchema = BaseEntitySchema.extend({
+  groupId: z.string().uuid(),
+  delta: z.number().int(),
+  reason: AnimalAdjustmentReasonSchema,
+  notes: z.string().max(500).optional(),
+  harvestEventId: z.string().uuid().optional(),
   adjustedAt: z.string().datetime()
 });
 

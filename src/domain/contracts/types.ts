@@ -1,7 +1,7 @@
 /**
  * katubaya Domain Contracts
  * Source of truth for all data types
- * Schema Version: 1.0.0
+ * Schema Version: 1.1.0
  */
 
 // ============================================================================
@@ -15,6 +15,7 @@ export type CropCategoryType =
   | 'herbs'
   | 'nuts'
   | 'roots'
+  | 'animal'
   | 'custom';
 
 export type UnitType = 
@@ -25,7 +26,8 @@ export type UnitType =
   | 'liter'
   | 'ml'
   | 'box'
-  | 'bag';
+  | 'bag'
+  | 'dozen';
 
 export type AdjustmentReason = 
   | 'sold'
@@ -37,6 +39,16 @@ export type AdjustmentReason =
   | 'processing';
 
 export type ExpirationStatus = 'fresh' | 'expiring_soon' | 'expired';
+
+export type Species = 'cattle' | 'poultry' | 'swine' | 'goat' | 'sheep' | 'bees' | 'fish' | 'other';
+
+export type AnimalAdjustmentReason =
+  | 'birth'
+  | 'purchase'
+  | 'death'
+  | 'sale'
+  | 'slaughter'
+  | 'correction';
 
 // ============================================================================
 // BASE ENTITY
@@ -102,6 +114,7 @@ export interface HarvestEvent extends BaseEntity {
   harvestedAt: string; // ISO 8601
   notes?: string;
   lotId: string; // Reference to created lot
+  animalGroupId?: string; // Milking, egg collection, slaughter: which animal lot produced it
 }
 
 export interface Lot extends BaseEntity {
@@ -128,6 +141,30 @@ export interface InventoryAdjustment extends BaseEntity {
   unit: UnitType;
   reason: AdjustmentReason;
   notes?: string;
+  adjustedAt: string;
+  harvestEventId?: string; // reason 'processing': the production this lot was turned into
+}
+
+// ============================================================================
+// ANIMALS ("lote de animais": a group managed together)
+// ============================================================================
+
+export interface AnimalGroup extends BaseEntity {
+  name: string;
+  species: Species;
+  initialHeadcount: number;
+  headcount: number; // current heads; 0 = closed lot
+  zoneId?: string;
+  startedAt: string;
+  notes?: string;
+}
+
+export interface AnimalAdjustment extends BaseEntity {
+  groupId: string;
+  delta: number; // negative for exits
+  reason: AnimalAdjustmentReason;
+  notes?: string;
+  harvestEventId?: string; // slaughter: the meat harvest it produced
   adjustedAt: string;
 }
 

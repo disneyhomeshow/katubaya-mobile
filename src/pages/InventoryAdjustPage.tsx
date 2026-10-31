@@ -10,10 +10,10 @@ import { Package, AlertTriangle } from 'lucide-react';
 import { AppShell, PageHeader } from '@/components/layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { AdjustmentDialog } from '@/components/inventory/AdjustmentDialog';
+import { AdjustmentDialog, type ProcessingOutput } from '@/components/inventory/AdjustmentDialog';
 import { ExpirationBadge } from '@/components/inventory/ExpirationBadge';
 import { db } from '@/data/db/schema';
-import { lotRepository } from '@/data/repositories';
+import { lotRepository, harvestRepository } from '@/data/repositories';
 import { useInventory } from '@/hooks/useInventory';
 import { getExpirationStatus, getDaysUntilExpiry } from '@/domain/rules/expiration';
 import type { Lot, Crop, Cultivar } from '@/domain/contracts/types';
@@ -66,9 +66,23 @@ export default function InventoryAdjustPage() {
     setDialogOpen(true);
   };
 
-  const handleAdjust = async (delta: number, reason: Parameters<typeof adjustLot>[2], notes?: string) => {
+  const handleAdjust = async (
+    delta: number,
+    reason: Parameters<typeof adjustLot>[2],
+    notes?: string,
+    output?: ProcessingOutput
+  ) => {
     if (!selectedLot) return;
-    
+
+    if (output) {
+      await harvestRepository.createFromProcessing(
+        { cropId: selectedLot.lot.cropId, unit: selectedLot.lot.unit, quantity: Math.abs(delta) },
+        { ...output, notes }
+      );
+      toast.success(t('inventory.processed'));
+      return;
+    }
+
     await adjustLot(selectedLot.lot.id, delta, reason, notes);
     
     toast.success(t('inventory.adjusted'), {

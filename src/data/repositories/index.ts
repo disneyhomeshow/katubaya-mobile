@@ -9,3 +9,4 @@ export { harvestRepository, type CreateHarvestInput } from './harvestRepository'
 export { inventoryRepository, type CreateAdjustmentInput } from './inventoryRepository';
 export { availabilityRepository } from './availabilityRepository';
 export { settingsRepository } from './settingsRepository';
+export { animalRepository, type CreateAnimalGroupInput, type AnimalAdjustInput } from './animalRepository';

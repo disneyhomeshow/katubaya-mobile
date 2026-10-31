@@ -14,7 +14,7 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useHarvests } from '@/hooks/useHarvests';
 import { db } from '@/data/db/schema';
-import { cropRepository } from '@/data/repositories';
+import { cropRepository, categoryRepository, animalRepository } from '@/data/repositories';
 import {
   CropSelector,
   QuantityInput,
@@ -56,6 +56,7 @@ export default function HarvestWizardPage() {
   const [quantity, setQuantity] = useState(0);
   const [unit, setUnit] = useState<UnitType>(prefillUnit || 'kg');
   const [zoneId, setZoneId] = useState<string | undefined>();
+  const [animalGroupId, setAnimalGroupId] = useState<string | undefined>();
   // Local calendar date; toISOString() would give the UTC date (tomorrow after 21:00 in UTC-3)
   const [harvestDate, setHarvestDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [notes, setNotes] = useState('');
@@ -82,8 +83,11 @@ export default function HarvestWizardPage() {
     }
   }, [prefillCropId, prefillCultivarId, prefillUnit, isInitialized, getCultivarsForCrop]);
 
-  // Load zones
-  const zones = useLiveQuery(() => db.zones.toArray(), [], []);
+  // Load zones, animal lots and categories (the lot field shows only for 'animal' crops)
+  const zones = useLiveQuery(() => db.zones.orderBy('sortOrder').toArray(), [], []);
+  const animalGroups = useLiveQuery(() => animalRepository.getAll(), [], []);
+  const categories = useLiveQuery(() => categoryRepository.getAll(), [], []);
+  const showAnimalLot = categories.find((c) => c.id === selectedCrop?.categoryId)?.type === 'animal';
 
   // Load cultivars when crop is selected
   useEffect(() => {
@@ -95,6 +99,7 @@ export default function HarvestWizardPage() {
   const handleCropSelect = useCallback((crop: Crop) => {
     setSelectedCrop(crop);
     setSelectedCultivar(undefined);
+    setAnimalGroupId(undefined);
     setUnit(crop.defaultUnit);
     setStep('quantity');
   }, []);
@@ -146,6 +151,7 @@ export default function HarvestWizardPage() {
         cropId: selectedCrop.id,
         cultivarId: selectedCultivar?.id,
         zoneId,
+        animalGroupId: showAnimalLot ? animalGroupId : undefined,
         quantity,
         unit,
         // 'YYYY-MM-DD' alone parses as UTC midnight = previous evening in Brazil; pin to local noon
@@ -167,6 +173,8 @@ export default function HarvestWizardPage() {
     selectedCrop,
     selectedCultivar,
     zoneId,
+    animalGroupId,
+    showAnimalLot,
     quantity,
     unit,
     harvestDate,
@@ -244,9 +252,13 @@ export default function HarvestWizardPage() {
           <ContextInput
             zones={zones}
             zoneId={zoneId}
+            animalGroups={animalGroups}
+            animalGroupId={animalGroupId}
+            showAnimalLot={showAnimalLot}
             harvestDate={harvestDate}
             notes={notes}
             onZoneChange={setZoneId}
+            onAnimalGroupChange={setAnimalGroupId}
             onDateChange={setHarvestDate}
             onNotesChange={setNotes}
           />

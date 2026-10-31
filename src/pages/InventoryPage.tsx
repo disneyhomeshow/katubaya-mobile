@@ -10,11 +10,11 @@ import { AppShell } from '@/components/layout/AppShell';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { InventoryGroupCard, AdjustmentDialog } from '@/components/inventory';
+import { InventoryGroupCard, AdjustmentDialog, type ProcessingOutput } from '@/components/inventory';
 import { useInventory } from '@/hooks/useInventory';
 import { useCrops, useCultivars } from '@/hooks';
 import type { InventorySnapshot, Lot, Crop, Cultivar, AdjustmentReason } from '@/domain/contracts/types';
-import { lotRepository, inventoryRepository } from '@/data/repositories';
+import { lotRepository, inventoryRepository, harvestRepository } from '@/data/repositories';
 import { toast } from 'sonner';
 
 export default function InventoryPage() {
@@ -64,9 +64,22 @@ export default function InventoryPage() {
     setAdjustDialogOpen(true);
   };
 
-  const handleAdjust = async (delta: number, reason: AdjustmentReason, notes?: string) => {
+  const handleAdjust = async (
+    delta: number,
+    reason: AdjustmentReason,
+    notes?: string,
+    output?: ProcessingOutput
+  ) => {
     if (!selectedLot) return;
-    await adjustLot(selectedLot.lot.id, delta, reason, notes);
+    if (output) {
+      await harvestRepository.createFromProcessing(
+        { cropId: selectedLot.lot.cropId, unit: selectedLot.lot.unit, quantity: Math.abs(delta) },
+        { ...output, notes }
+      );
+      toast.success(t('inventory.processed'));
+    } else {
+      await adjustLot(selectedLot.lot.id, delta, reason, notes);
+    }
     await loadSnapshot();
   };
 

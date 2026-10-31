@@ -54,6 +54,15 @@ const CROP_EMOJIS: Record<string, string> = {
   // Nuts
   'castanha': '🌰',
   'amendoim': '🥜',
+  // Livestock
+  'leite': '🥛',
+  'queijo': '🧀',
+  'manteiga': '🧈',
+  'iogurte': '🥛',
+  'ovo': '🥚',
+  'frango': '🍗',
+  'carne': '🥩',
+  'mel': '🍯',
   // Default
   'default': '🌱'
 };
@@ -65,7 +74,7 @@ export function getCropEmoji(cropName: string): string {
   const normalized = cropName.toLowerCase().trim();
   
   for (const [key, emoji] of Object.entries(CROP_EMOJIS)) {
-    if (normalized.includes(key) || key.includes(normalized)) {
+    if (normalized.includes(key)) {
       return emoji;
     }
   }
@@ -85,7 +94,8 @@ export function formatUnit(unit: UnitType, quantity: number): string {
     liter: { singular: 'L', plural: 'L' },
     ml: { singular: 'ml', plural: 'ml' },
     box: { singular: 'cx', plural: 'cx' },
-    bag: { singular: 'saco', plural: 'sacos' }
+    bag: { singular: 'saco', plural: 'sacos' },
+    dozen: { singular: 'dz', plural: 'dz' }
   };
   
   const label = unitLabels[unit];

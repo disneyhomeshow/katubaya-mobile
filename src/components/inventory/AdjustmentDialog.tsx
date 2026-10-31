@@ -4,6 +4,7 @@
 
 import { useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useLiveQuery } from 'dexie-react-hooks';
 import { Minus, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -24,7 +25,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import type { Lot, AdjustmentReason, Crop, Cultivar } from '@/domain/contracts/types';
+import { cropRepository, lotRepository } from '@/data/repositories';
+import { InsufficientStockError } from '@/domain/rules/processing';
+import type { Lot, AdjustmentReason, Crop, Cultivar, UnitType } from '@/domain/contracts/types';
+
+/** Reason 'processing': what the consumed stock became (leite → queijo) */
+export interface ProcessingOutput {
+  cropId: string;
+  quantity: number;
+  unit: UnitType;
+}
 
 interface AdjustmentDialogProps {
   open: boolean;
@@ -32,7 +42,12 @@ interface AdjustmentDialogProps {
   lot: Lot;
   crop?: Crop;
   cultivar?: Cultivar;
-  onAdjust: (delta: number, reason: AdjustmentReason, notes?: string) => Promise<void>;
+  onAdjust: (
+    delta: number,
+    reason: AdjustmentReason,
+    notes?: string,
+    output?: ProcessingOutput
+  ) => Promise<void>;
 }
 
 const ADJUSTMENT_REASONS: AdjustmentReason[] = [
@@ -59,25 +74,47 @@ export function AdjustmentDialog({
   const [isAdding, setIsAdding] = useState(false);
   const [reason, setReason] = useState<AdjustmentReason>('sold');
   const [notes, setNotes] = useState('');
+  const [outputCropId, setOutputCropId] = useState('');
+  const [outputQuantity, setOutputQuantity] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Processing only removes; the add list hides it and the toggle resets it
+  const isProcessing = !isAdding && reason === 'processing';
+  const reasons = isAdding ? ADJUSTMENT_REASONS.filter((r) => r !== 'processing') : ADJUSTMENT_REASONS;
+
+  // Processing consumes the whole product FIFO, so its ceiling is the crop total, not this lot
+  const cropLots = useLiveQuery(() => lotRepository.getByCrop(lot.cropId), [lot.cropId], [] as Lot[]);
+  const crops = useLiveQuery(() => cropRepository.getAll(), [], [] as Crop[]);
+  // Same unit only (the repository applies the same filter); rounded so 0.1+0.2 never shows as 0.30000000000000004
+  const cropTotal = Number(cropLots.filter((l) => l.unit === lot.unit).reduce((sum, l) => sum + l.quantityRemaining, 0).toFixed(3));
+  const outputCrop = crops.find((c) => c.id === outputCropId);
+
   const unit = t(`units.${lot.unit}`);
-  const maxRemove = lot.quantityRemaining;
+  const maxRemove = isProcessing ? cropTotal : lot.quantityRemaining;
   const qty = parseFloat(quantity);
   const hasQty = !isNaN(qty) && qty > 0;
   const overMax = !isAdding && hasQty && qty > maxRemove;
-  const canSave = hasQty && !overMax && !isSubmitting;
+  const outQty = parseFloat(outputQuantity);
+  const hasOutput = !!outputCrop && !isNaN(outQty) && outQty > 0;
+  const canSave = hasQty && !overMax && (!isProcessing || hasOutput) && !isSubmitting;
 
   const resetForm = () => {
     setQuantity('');
     setIsAdding(false);
     setReason('sold');
     setNotes('');
+    setOutputCropId('');
+    setOutputQuantity('');
   };
 
   const handleOpenChange = (next: boolean) => {
     if (!next) resetForm();
     onOpenChange(next);
+  };
+
+  const handleAddMode = () => {
+    setIsAdding(true);
+    if (reason === 'processing') setReason('sold');
   };
 
   const handleSubmit = async () => {
@@ -86,10 +123,17 @@ export function AdjustmentDialog({
     setIsSubmitting(true);
     try {
       const delta = isAdding ? qty : -qty;
-      await onAdjust(delta, reason, notes || undefined);
+      const output = isProcessing && outputCrop
+        ? { cropId: outputCrop.id, quantity: outQty, unit: outputCrop.defaultUnit }
+        : undefined;
+      await onAdjust(delta, reason, notes || undefined, output);
       handleOpenChange(false);
-    } catch {
-      toast.error(t('errors.saveFailed'));
+    } catch (error) {
+      toast.error(
+        error instanceof InsufficientStockError
+          ? t('inventory.exceedsAvailable', { max: cropTotal, unit })
+          : t('errors.saveFailed')
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -110,7 +154,7 @@ export function AdjustmentDialog({
           <div className="bg-muted/50 rounded-lg p-3">
             <p className="font-medium">{displayName}</p>
             <p className="text-sm text-muted-foreground">
-              {t('inventory.currentQuantity')}: {lot.quantityRemaining} {unit}
+              {t('inventory.currentQuantity')}: {isProcessing ? cropTotal : lot.quantityRemaining} {unit}
             </p>
           </div>
 
@@ -131,7 +175,7 @@ export function AdjustmentDialog({
               variant={isAdding ? 'default' : 'outline'}
               className="flex-1"
               aria-pressed={isAdding}
-              onClick={() => setIsAdding(true)}
+              onClick={handleAddMode}
             >
               <Plus className="h-4 w-4" aria-hidden="true" />
               {t('actions.add')}
@@ -163,7 +207,9 @@ export function AdjustmentDialog({
               >
                 {overMax
                   ? t('inventory.exceedsAvailable', { max: maxRemove, unit })
-                  : t('inventory.maxRemove', { max: maxRemove, unit })}
+                  : isProcessing
+                    ? t('inventory.processing.fifoHint', { max: maxRemove, unit })
+                    : t('inventory.maxRemove', { max: maxRemove, unit })}
               </p>
             )}
           </div>
@@ -176,7 +222,7 @@ export function AdjustmentDialog({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {ADJUSTMENT_REASONS.map((r) => (
+                {reasons.map((r) => (
                   <SelectItem key={r} value={r}>
                     {t(`inventory.reasons.${r}`)}
                   </SelectItem>
@@ -184,6 +230,45 @@ export function AdjustmentDialog({
               </SelectContent>
             </Select>
           </div>
+
+          {/* Processing output */}
+          {isProcessing && (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor={`${id}-output-crop`}>{t('inventory.processing.outputProduct')}</Label>
+                <Select value={outputCropId} onValueChange={setOutputCropId}>
+                  <SelectTrigger id={`${id}-output-crop`}>
+                    <SelectValue placeholder={t('inventory.processing.selectProduct')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {crops.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor={`${id}-output-quantity`}>
+                  {t('inventory.processing.outputQuantity')}
+                  {outputCrop && ` (${t(`units.${outputCrop.defaultUnit}`)})`}
+                </Label>
+                <Input
+                  id={`${id}-output-quantity`}
+                  type="number"
+                  inputMode="decimal"
+                  step="0.1"
+                  min="0"
+                  required
+                  value={outputQuantity}
+                  onChange={(e) => setOutputQuantity(e.target.value)}
+                  placeholder="0"
+                />
+              </div>
+            </>
+          )}
 
           {/* Notes */}
           <div className="space-y-2">

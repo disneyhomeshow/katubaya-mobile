@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/select';
 import type { Crop, Cultivar, UnitType } from '@/domain/contracts/types';
 
-const UNITS: UnitType[] = ['kg', 'g', 'unit', 'bunch', 'liter', 'ml', 'box', 'bag'];
+const UNITS: UnitType[] = ['kg', 'g', 'unit', 'dozen', 'bunch', 'liter', 'ml', 'box', 'bag'];
 // Radix Select rejects value="" on items; sentinel for "no cultivar"
 const NONE = 'none';
 

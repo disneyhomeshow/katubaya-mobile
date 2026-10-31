@@ -80,6 +80,14 @@ A batch of product that shares harvest context (same crop, same harvest time, si
 * Purpose: enables shelf-life and FIFO reasoning.
 * Fields: lotId, cropId, harvestEventId, createdAt, quantityRemaining, unit, expiresAtEstimate
 
+### Animal lot (lote de animais)
+
+A group of animals managed together (species, headcount, optional zone).
+
+* Its headcount changes only through Animal Adjustments (birth, purchase, death, sale, slaughter, correction).
+* Production from it (milk, eggs, meat) is a Harvest Event linked to the lot via animalGroupId.
+* Not a product Lot: a product Lot is stock; an animal lot is the herd that produces it.
+
 ### Shelf-life Rule
 
 A default rule that estimates expiration for a crop/cultivar.
@@ -106,6 +114,13 @@ A manual change applied to inventory to reflect reality.
 * Reasons (enum): loss, damage, consumption, gift, sale, correction, processing (optional)
 * Fields: id, datetime, lotId or cropId, deltaQuantity, unit, reason, notes
 * Strong-typing note: store deltas as signed numbers.
+
+### Processing
+
+Turning stock of one product into another (milk into cheese, pig into cuts).
+
+* Consumes the source product's lots oldest-expiry-first (FIFO) as adjustments with reason processing, and creates a new lot through a Harvest Event of the output product.
+* Each consuming adjustment points at that Harvest Event via harvestEventId.
 
 ---
 
@@ -224,6 +239,7 @@ A materialized view derived from events (inventory totals, latest availability l
 
 * “Crop” not “SKU”
 * “Lot” not “Batch ID” (unless your users prefer “batch”)
+* “Lote de animais” for the herd group, never just “lote” (that is a product lot)
 * “Zone” not “Location”
 * “Adjust” not “Fix”
 * “Availability” not “Catalog”

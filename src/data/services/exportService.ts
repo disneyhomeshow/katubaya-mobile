@@ -44,7 +44,7 @@ export async function exportZip(type: ExportType, farmName?: string): Promise<Ex
   const full = type === 'full';
   const now = new Date().toISOString();
 
-  const [categories, crops, cultivars, zones, harvests, lots, adjustments, inventorySnapshot, current] =
+  const [categories, crops, cultivars, zones, harvests, lots, adjustments, animalGroups, animalAdjustments, inventorySnapshot, current] =
     await Promise.all([
       db.categories.toArray(),
       db.crops.toArray(),
@@ -53,6 +53,8 @@ export async function exportZip(type: ExportType, farmName?: string): Promise<Ex
       full ? db.harvestEvents.toArray() : [],
       full ? db.lots.toArray() : [],
       full ? db.inventoryAdjustments.toArray() : [],
+      full ? db.animalGroups.toArray() : [],
+      full ? db.animalAdjustments.toArray() : [],
       inventoryRepository.generateSnapshot(),
       availabilityRepository.getCurrent()
     ]);
@@ -81,6 +83,8 @@ export async function exportZip(type: ExportType, farmName?: string): Promise<Ex
   if (full) {
     const data = {
       categories, crops, cultivars, zones, harvests, lots, adjustments,
+      'animal-groups': animalGroups,
+      'animal-adjustments': animalAdjustments,
       'inventory-snapshot': inventorySnapshot,
       'availability-list': availabilityList
     };
@@ -93,7 +97,7 @@ export async function exportZip(type: ExportType, farmName?: string): Promise<Ex
   }
 
   const csv: Record<string, object[]> = full
-    ? { categories, crops, cultivars, zones, harvests, lots, adjustments, inventory: inventorySnapshot.items }
+    ? { categories, crops, cultivars, zones, harvests, lots, adjustments, 'animal-groups': animalGroups, 'animal-adjustments': animalAdjustments, inventory: inventorySnapshot.items }
     : { categories, crops, cultivars, inventory: inventorySnapshot.items, availability: availabilityList.items };
   for (const [name, rows] of Object.entries(csv)) {
     if (rows.length > 0) zip.file(`csv/${name}.csv`, toCSV(rows));

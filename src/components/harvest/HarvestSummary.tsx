@@ -3,10 +3,9 @@
  */
 
 import { useTranslation } from 'react-i18next';
-import { Check, Wheat, Calendar, MapPin, FileText } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Wheat, Calendar, MapPin, FileText } from 'lucide-react';
 import type { Crop, Cultivar, Zone, UnitType } from '@/domain/contracts/types';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 
 interface HarvestSummaryProps {
   crop: Crop;
@@ -28,7 +27,8 @@ export function HarvestSummary({
   notes,
 }: HarvestSummaryProps) {
   const { t } = useTranslation();
-  const displayDate = format(new Date(harvestDate), 'dd/MM/yyyy');
+  // parseISO reads 'YYYY-MM-DD' as local midnight; new Date() would read it as UTC (previous day in UTC-3)
+  const displayDate = format(parseISO(harvestDate), 'dd/MM/yyyy');
 
   return (
     <div className="flex flex-col h-full px-4 py-6">

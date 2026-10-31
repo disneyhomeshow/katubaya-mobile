@@ -10,7 +10,7 @@ export const cropRepository = {
    * Get all crops
    */
   async getAll(): Promise<Crop[]> {
-    return db.crops.toArray();
+    return db.crops.orderBy('name').toArray();
   },
 
   /**

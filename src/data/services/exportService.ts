@@ -8,17 +8,10 @@ import Papa from 'papaparse';
 import { db } from '@/data/db/schema';
 import { inventoryRepository } from '@/data/repositories/inventoryRepository';
 import { availabilityRepository } from '@/data/repositories/availabilityRepository';
-import type { 
-  AvailabilityPack, 
-  ExportManifest,
-  Crop,
-  Cultivar,
-  CropCategory,
-  HarvestEvent,
-  Lot,
-  InventoryAdjustment
-} from '@/domain/contracts/types';
+import type { AvailabilityList, AvailabilityPack, ExportManifest } from '@/domain/contracts/types';
 import { APP_VERSION, SCHEMA_VERSION } from '@/domain/contracts';
+
+export type ExportType = 'availability' | 'full';
 
 export interface ExportResult {
   blob: Blob;
@@ -33,223 +26,92 @@ export interface ExportResult {
   };
 }
 
-/**
- * Generate a unique pack ID
- */
-function generatePackId(): string {
-  return crypto.randomUUID();
+/** Nested arrays/objects become JSON strings so each row stays one CSV line */
+function toCSV(rows: object[]): string {
+  const flat = rows.map(row =>
+    Object.fromEntries(
+      Object.entries(row).map(([k, v]) => [k, v !== null && typeof v === 'object' ? JSON.stringify(v) : v])
+    )
+  );
+  return Papa.unparse(flat, { header: true, quotes: true });
 }
 
 /**
- * Convert data to CSV string
+ * 'availability': current snapshot + catalog as one pack.
+ * 'full': every table, one JSON per table.
  */
-function toCSV<T extends Record<string, unknown>>(data: T[]): string {
-  if (data.length === 0) return '';
-  return Papa.unparse(data, {
-    header: true,
-    quotes: true
-  });
-}
+export async function exportZip(type: ExportType, farmName?: string): Promise<ExportResult> {
+  const full = type === 'full';
+  const now = new Date().toISOString();
 
-/**
- * Flatten nested objects for CSV export
- */
-function flattenForCSV<T extends object>(items: T[]): Record<string, unknown>[] {
-  return items.map(item => {
-    const flat: Record<string, unknown> = {};
-    for (const [key, value] of Object.entries(item)) {
-      if (Array.isArray(value)) {
-        flat[key] = JSON.stringify(value);
-      } else if (typeof value === 'object' && value !== null) {
-        flat[key] = JSON.stringify(value);
-      } else {
-        flat[key] = value;
-      }
-    }
-    return flat;
-  });
-}
+  const [categories, crops, cultivars, zones, harvests, lots, adjustments, animalGroups, animalAdjustments, inventorySnapshot, current] =
+    await Promise.all([
+      db.categories.toArray(),
+      db.crops.toArray(),
+      db.cultivars.toArray(),
+      full ? db.zones.toArray() : [],
+      full ? db.harvestEvents.toArray() : [],
+      full ? db.lots.toArray() : [],
+      full ? db.inventoryAdjustments.toArray() : [],
+      full ? db.animalGroups.toArray() : [],
+      full ? db.animalAdjustments.toArray() : [],
+      inventoryRepository.generateSnapshot(),
+      availabilityRepository.getCurrent()
+    ]);
 
-/**
- * Export availability pack (current snapshot + catalog)
- */
-export async function exportAvailabilityPack(farmName?: string): Promise<ExportResult> {
-  const zip = new JSZip();
-  
-  // Fetch all data
-  const [categories, crops, cultivars, inventorySnapshot] = await Promise.all([
-    db.categories.toArray(),
-    db.crops.toArray(),
-    db.cultivars.toArray(),
-    inventoryRepository.generateSnapshot()
-  ]);
+  const availabilityList: AvailabilityList = current ?? {
+    id: crypto.randomUUID(),
+    items: [],
+    isStale: true,
+    inventorySnapshotAt: now,
+    createdAt: now,
+    updatedAt: now
+  };
 
-  // Get latest availability list or create empty one
-  let availabilityList = await availabilityRepository.getCurrent();
-  if (!availabilityList) {
-    availabilityList = {
-      id: generatePackId(),
-      items: [],
-      isStale: true,
-      inventorySnapshotAt: new Date().toISOString(),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-  }
-
-  // Create manifest
   const manifest: ExportManifest = {
     schemaVersion: SCHEMA_VERSION,
     appVersion: APP_VERSION,
-    exportedAt: new Date().toISOString(),
-    packId: generatePackId(),
-    packType: 'availability',
+    exportedAt: now,
+    packId: crypto.randomUUID(),
+    packType: full ? 'full_history' : 'availability',
     farmName
   };
 
-  // Create availability pack
-  const pack: AvailabilityPack = {
-    manifest,
-    availabilityList,
-    inventorySnapshot,
-    crops,
-    cultivars,
-    categories
-  };
-
-  // Add JSON files
-  zip.file('manifest.json', JSON.stringify(manifest, null, 2));
-  zip.file('availability-pack.json', JSON.stringify(pack, null, 2));
-
-  // Add CSV files
-  if (categories.length > 0) {
-    zip.file('csv/categories.csv', toCSV(flattenForCSV(categories)));
-  }
-  if (crops.length > 0) {
-    zip.file('csv/crops.csv', toCSV(flattenForCSV(crops)));
-  }
-  if (cultivars.length > 0) {
-    zip.file('csv/cultivars.csv', toCSV(flattenForCSV(cultivars)));
-  }
-  if (inventorySnapshot.items.length > 0) {
-    zip.file('csv/inventory.csv', toCSV(flattenForCSV(inventorySnapshot.items)));
-  }
-  if (availabilityList.items.length > 0) {
-    zip.file('csv/availability.csv', toCSV(flattenForCSV(availabilityList.items)));
-  }
-
-  // Generate ZIP
-  const blob = await zip.generateAsync({ type: 'blob' });
-  const date = new Date().toISOString().split('T')[0];
-  const filename = `katubaya-availability-${date}.zip`;
-
-  return {
-    blob,
-    filename,
-    stats: {
-      crops: crops.length,
-      cultivars: cultivars.length,
-      categories: categories.length,
-      harvests: 0,
-      lots: inventorySnapshot.items.reduce((sum, item) => sum + item.lots.length, 0),
-      adjustments: 0
-    }
-  };
-}
-
-/**
- * Export full history (all data including harvests and adjustments)
- */
-export async function exportFullHistory(farmName?: string): Promise<ExportResult> {
   const zip = new JSZip();
-
-  // Fetch all data
-  const [categories, crops, cultivars, zones, harvests, lots, adjustments, inventorySnapshot] = await Promise.all([
-    db.categories.toArray(),
-    db.crops.toArray(),
-    db.cultivars.toArray(),
-    db.zones.toArray(),
-    db.harvestEvents.toArray(),
-    db.lots.toArray(),
-    db.inventoryAdjustments.toArray(),
-    inventoryRepository.generateSnapshot()
-  ]);
-
-  // Get latest availability list
-  let availabilityList = await availabilityRepository.getCurrent();
-  if (!availabilityList) {
-    availabilityList = {
-      id: generatePackId(),
-      items: [],
-      isStale: true,
-      inventorySnapshotAt: new Date().toISOString(),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-  }
-
-  // Create manifest
-  const manifest: ExportManifest = {
-    schemaVersion: SCHEMA_VERSION,
-    appVersion: APP_VERSION,
-    exportedAt: new Date().toISOString(),
-    packId: generatePackId(),
-    packType: 'full_history',
-    farmName
-  };
-
-  // Add JSON files
   zip.file('manifest.json', JSON.stringify(manifest, null, 2));
-  zip.file('data/categories.json', JSON.stringify(categories, null, 2));
-  zip.file('data/crops.json', JSON.stringify(crops, null, 2));
-  zip.file('data/cultivars.json', JSON.stringify(cultivars, null, 2));
-  zip.file('data/zones.json', JSON.stringify(zones, null, 2));
-  zip.file('data/harvests.json', JSON.stringify(harvests, null, 2));
-  zip.file('data/lots.json', JSON.stringify(lots, null, 2));
-  zip.file('data/adjustments.json', JSON.stringify(adjustments, null, 2));
-  zip.file('data/inventory-snapshot.json', JSON.stringify(inventorySnapshot, null, 2));
-  zip.file('data/availability-list.json', JSON.stringify(availabilityList, null, 2));
 
-  // Add CSV files
-  if (categories.length > 0) {
-    zip.file('csv/categories.csv', toCSV(flattenForCSV(categories)));
-  }
-  if (crops.length > 0) {
-    zip.file('csv/crops.csv', toCSV(flattenForCSV(crops)));
-  }
-  if (cultivars.length > 0) {
-    zip.file('csv/cultivars.csv', toCSV(flattenForCSV(cultivars)));
-  }
-  if (zones.length > 0) {
-    zip.file('csv/zones.csv', toCSV(flattenForCSV(zones)));
-  }
-  if (harvests.length > 0) {
-    zip.file('csv/harvests.csv', toCSV(flattenForCSV(harvests)));
-  }
-  if (lots.length > 0) {
-    zip.file('csv/lots.csv', toCSV(flattenForCSV(lots)));
-  }
-  if (adjustments.length > 0) {
-    zip.file('csv/adjustments.csv', toCSV(flattenForCSV(adjustments)));
-  }
-  if (inventorySnapshot.items.length > 0) {
-    zip.file('csv/inventory.csv', toCSV(flattenForCSV(inventorySnapshot.items)));
+  if (full) {
+    const data = {
+      categories, crops, cultivars, zones, harvests, lots, adjustments,
+      'animal-groups': animalGroups,
+      'animal-adjustments': animalAdjustments,
+      'inventory-snapshot': inventorySnapshot,
+      'availability-list': availabilityList
+    };
+    for (const [name, value] of Object.entries(data)) {
+      zip.file(`data/${name}.json`, JSON.stringify(value, null, 2));
+    }
+  } else {
+    const pack: AvailabilityPack = { manifest, availabilityList, inventorySnapshot, crops, cultivars, categories };
+    zip.file('availability-pack.json', JSON.stringify(pack, null, 2));
   }
 
-  // Generate ZIP
-  const blob = await zip.generateAsync({ type: 'blob' });
-  const date = new Date().toISOString().split('T')[0];
-  const filename = `katubaya-full-export-${date}.zip`;
+  const csv: Record<string, object[]> = full
+    ? { categories, crops, cultivars, zones, harvests, lots, adjustments, 'animal-groups': animalGroups, 'animal-adjustments': animalAdjustments, inventory: inventorySnapshot.items }
+    : { categories, crops, cultivars, inventory: inventorySnapshot.items, availability: availabilityList.items };
+  for (const [name, rows] of Object.entries(csv)) {
+    if (rows.length > 0) zip.file(`csv/${name}.csv`, toCSV(rows));
+  }
 
   return {
-    blob,
-    filename,
+    blob: await zip.generateAsync({ type: 'blob' }),
+    filename: `katubaya-${full ? 'full-export' : 'availability'}-${now.slice(0, 10)}.zip`,
     stats: {
       crops: crops.length,
       cultivars: cultivars.length,
       categories: categories.length,
       harvests: harvests.length,
-      lots: lots.length,
+      lots: full ? lots.length : inventorySnapshot.items.reduce((sum, item) => sum + item.lots.length, 0),
       adjustments: adjustments.length
     }
   };
@@ -268,9 +130,3 @@ export function downloadBlob(blob: Blob, filename: string): void {
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
-
-export const exportService = {
-  exportAvailabilityPack,
-  exportFullHistory,
-  downloadBlob
-};

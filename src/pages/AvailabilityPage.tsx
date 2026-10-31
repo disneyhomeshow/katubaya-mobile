@@ -3,38 +3,32 @@
  */
 
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Settings2, Package, RefreshCw, ListChecks } from 'lucide-react';
+import { Settings2, Package, RefreshCw, ListChecks, Smartphone, CalendarDays } from 'lucide-react';
 import { AppShell } from '@/components/layout/AppShell';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  AvailabilityItemRow, 
-  MessagePreview, 
-  ConfigDialog 
-} from '@/components/availability';
+import { AvailabilityItemRow, MessagePreview } from '@/components/availability';
 import { useAvailability } from '@/hooks/useAvailability';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import type { AvailabilityList } from '@/domain/contracts/types';
 
 export default function AvailabilityPage() {
   const { t } = useTranslation();
-  const { toast } = useToast();
+  const navigate = useNavigate();
   const {
     currentAvailability,
-    config,
     generateAvailability,
     toggleItemInclusion,
     updateItemQuantity,
-    saveConfig,
     copyToClipboard
   } = useAvailability();
 
   const [availability, setAvailability] = useState<AvailabilityList | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [configDialogOpen, setConfigDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('preview');
 
   // Load current availability on mount
@@ -49,30 +43,24 @@ export default function AvailabilityPage() {
     try {
       const newList = await generateAvailability();
       setAvailability(newList);
-      toast({
-        title: t('availability.title'),
-        description: 'Lista gerada com sucesso!'
-      });
+      toast.success(t('availability.generated'));
     } catch (error) {
-      toast({
-        title: t('errors.generic'),
-        variant: 'destructive'
-      });
+      toast.error(t('availability.generateFailed'));
     } finally {
       setIsGenerating(false);
     }
   };
 
   const handleCopy = async () => {
-    if (!availability?.generatedMessage) return;
-    
+    if (!availability?.generatedMessage) return false;
+
     const success = await copyToClipboard(availability.generatedMessage);
     if (success) {
-      toast({
-        title: t('availability.copied'),
-        description: 'Cole no WhatsApp para enviar'
-      });
+      toast.success(t('availability.copied'), { description: t('availability.pasteHint') });
+    } else {
+      toast.error(t('availability.copyFailed'));
     }
+    return success;
   };
 
   const handleToggleItem = async (itemId: string) => {
@@ -87,12 +75,6 @@ export default function AvailabilityPage() {
     if (updated) setAvailability(updated);
   };
 
-  const handleSaveConfig = async (configData: Parameters<typeof saveConfig>[0]) => {
-    await saveConfig(configData);
-    // Regenerate to apply new config
-    await handleGenerate();
-  };
-
   const hasItems = availability && availability.items.length > 0;
   const includedCount = availability?.items.filter(i => i.isIncluded).length ?? 0;
 
@@ -104,7 +86,8 @@ export default function AvailabilityPage() {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => setConfigDialogOpen(true)}
+            aria-label={t('actions.configureAvailability')}
+            onClick={() => navigate('/availability/config')}
           >
             <Settings2 className="h-5 w-5" />
           </Button>
@@ -116,17 +99,13 @@ export default function AvailabilityPage() {
         {!hasItems && (
           <Card className="border-dashed">
             <CardContent className="flex flex-col items-center justify-center py-12">
-              <Package className="h-16 w-16 text-muted-foreground/50 mb-4" />
+              <Package className="h-16 w-16 text-muted-foreground/50 mb-4" aria-hidden="true" />
               <h3 className="text-lg font-medium mb-2">{t('availability.noItems')}</h3>
               <p className="text-sm text-muted-foreground text-center mb-6">
-                Gere uma lista a partir do seu estoque atual
+                {t('availability.generateHint')}
               </p>
               <Button onClick={handleGenerate} disabled={isGenerating} size="lg">
-                {isGenerating ? (
-                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                )}
+                <RefreshCw className={isGenerating ? 'h-4 w-4 mr-2 animate-spin' : 'h-4 w-4 mr-2'} />
                 {t('availability.generate')}
               </Button>
             </CardContent>
@@ -139,10 +118,11 @@ export default function AvailabilityPage() {
             <Tabs value={activeTab} onValueChange={setActiveTab}>
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="preview" className="gap-2">
-                  📱 {t('availability.preview')}
+                  <Smartphone className="h-4 w-4" aria-hidden="true" />
+                  {t('availability.preview')}
                 </TabsTrigger>
                 <TabsTrigger value="edit" className="gap-2">
-                  <ListChecks className="h-4 w-4" />
+                  <ListChecks className="h-4 w-4" aria-hidden="true" />
                   {t('availability.editItems')} ({includedCount})
                 </TabsTrigger>
               </TabsList>
@@ -163,7 +143,10 @@ export default function AvailabilityPage() {
                     <CardTitle className="text-base flex items-center justify-between">
                       <span>{t('availability.editItems')}</span>
                       <span className="text-sm font-normal text-muted-foreground">
-                        {includedCount} de {availability?.items.length ?? 0} itens
+                        {t('availability.includedCount', {
+                          included: includedCount,
+                          total: availability?.items.length ?? 0
+                        })}
                       </span>
                     </CardTitle>
                   </CardHeader>
@@ -180,8 +163,8 @@ export default function AvailabilityPage() {
                 </Card>
 
                 {/* Copy button in edit view too */}
-                <Button 
-                  onClick={handleCopy} 
+                <Button
+                  onClick={handleCopy}
                   className="w-full"
                   disabled={includedCount === 0}
                 >
@@ -191,20 +174,13 @@ export default function AvailabilityPage() {
             </Tabs>
 
             {/* Window name display */}
-            <div className="text-center text-sm text-muted-foreground">
-              📅 {availability?.windowName || t('availability.thisWeek')}
+            <div className="flex items-center justify-center gap-1.5 text-sm text-muted-foreground">
+              <CalendarDays className="h-4 w-4" aria-hidden="true" />
+              {availability?.windowName || t('availability.thisWeek')}
             </div>
           </>
         )}
       </div>
-
-      {/* Config Dialog */}
-      <ConfigDialog
-        open={configDialogOpen}
-        onOpenChange={setConfigDialogOpen}
-        config={config}
-        onSave={handleSaveConfig}
-      />
     </AppShell>
   );
 }

@@ -20,6 +20,7 @@ export interface CreateAdjustmentInput {
   quantityDelta: number;
   reason: AdjustmentReason;
   notes?: string;
+  harvestEventId?: string;
 }
 
 export const inventoryRepository = {
@@ -41,6 +42,7 @@ export const inventoryRepository = {
       unit: lot.unit,
       reason: input.reason,
       notes: input.notes,
+      harvestEventId: input.harvestEventId,
       adjustedAt: now,
       createdAt: now,
       updatedAt: now

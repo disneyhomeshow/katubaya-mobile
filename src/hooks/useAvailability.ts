@@ -105,9 +105,9 @@ export function useAvailability() {
       textarea.value = message;
       document.body.appendChild(textarea);
       textarea.select();
-      document.execCommand('copy');
+      const ok = document.execCommand('copy');
       document.body.removeChild(textarea);
-      return true;
+      return ok;
     }
   };
 

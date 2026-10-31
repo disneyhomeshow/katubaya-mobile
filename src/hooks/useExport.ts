@@ -5,14 +5,13 @@
 
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { exportService, type ExportResult } from '@/data/services/exportService';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
+import { exportZip, downloadBlob, type ExportResult, type ExportType } from '@/data/services/exportService';
 
-export type ExportType = 'availability' | 'full';
+export type { ExportType };
 
 export function useExport() {
   const { t } = useTranslation();
-  const { toast } = useToast();
   const [isExporting, setIsExporting] = useState(false);
   const [lastExport, setLastExport] = useState<ExportResult | null>(null);
 
@@ -20,17 +19,11 @@ export function useExport() {
     setIsExporting(true);
     
     try {
-      const result = type === 'availability'
-        ? await exportService.exportAvailabilityPack(farmName)
-        : await exportService.exportFullHistory(farmName);
-
-      // Trigger download
-      exportService.downloadBlob(result.blob, result.filename);
-      
+      const result = await exportZip(type, farmName);
+      downloadBlob(result.blob, result.filename);
       setLastExport(result);
 
-      toast({
-        title: t('export.success'),
+      toast.success(t('export.success'), {
         description: t('export.successDescription', {
           filename: result.filename,
           crops: result.stats.crops,
@@ -41,11 +34,7 @@ export function useExport() {
       return result;
     } catch (error) {
       console.error('Export failed:', error);
-      toast({
-        title: t('export.error'),
-        description: t('export.errorDescription'),
-        variant: 'destructive'
-      });
+      toast.error(t('export.error'), { description: t('export.errorDescription') });
       throw error;
     } finally {
       setIsExporting(false);

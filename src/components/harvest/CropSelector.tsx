@@ -3,9 +3,11 @@
  */
 
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Search, Star, Clock, ChevronRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -27,6 +29,7 @@ export function CropSelector({
   onSearch,
 }: CropSelectorProps) {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<Crop[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -56,12 +59,14 @@ export function CropSelector({
       <div className="relative px-4 py-3">
         <Search className="absolute left-7 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
-          type="text"
+          type="search"
+          enterKeyHint="search"
+          aria-label={t('harvest.searchCrops')}
           placeholder={t('harvest.searchCrops')}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
           className="pl-9"
-          autoFocus
         />
       </div>
 
@@ -71,9 +76,11 @@ export function CropSelector({
           {displayCrops !== null ? (
             <div className="space-y-2">
               {displayCrops.length === 0 ? (
-                <p className="text-center text-muted-foreground py-8">
-                  {t('errors.notFound')}
-                </p>
+                !isSearching && (
+                  <p className="text-center text-muted-foreground py-8">
+                    {t('harvest.noResults')}
+                  </p>
+                )
               ) : (
                 displayCrops.map((crop) => (
                   <CropItem key={crop.id} crop={crop} onSelect={onSelect} />
@@ -86,10 +93,10 @@ export function CropSelector({
               {favoriteCrops.length > 0 && (
                 <section>
                   <div className="flex items-center gap-2 mb-3">
-                    <Star className="h-4 w-4 text-amber-500" />
-                    <h3 className="text-sm font-medium text-muted-foreground">
+                    <Star className="h-4 w-4 text-primary fill-primary" />
+                    <h2 className="text-sm font-medium text-muted-foreground">
                       {t('harvest.favorites')}
-                    </h3>
+                    </h2>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {favoriteCrops.map((crop) => (
@@ -97,9 +104,9 @@ export function CropSelector({
                         key={crop.id}
                         onClick={() => onSelect(crop)}
                         className={cn(
-                          'px-4 py-3 rounded-xl bg-amber-500/10 border border-amber-500/20',
-                          'font-medium text-amber-700 dark:text-amber-400',
-                          'hover:bg-amber-500/20 active:scale-95 transition-all'
+                          'px-4 py-3 rounded-xl bg-primary/10 border border-primary/20',
+                          'font-medium text-primary',
+                          'hover:bg-primary/20 active:scale-95 transition-all'
                         )}
                       >
                         {crop.name}
@@ -114,9 +121,9 @@ export function CropSelector({
                 <section>
                   <div className="flex items-center gap-2 mb-3">
                     <Clock className="h-4 w-4 text-muted-foreground" />
-                    <h3 className="text-sm font-medium text-muted-foreground">
+                    <h2 className="text-sm font-medium text-muted-foreground">
                       {t('harvest.recent')}
-                    </h3>
+                    </h2>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {recentCrops.map((crop) => (
@@ -139,18 +146,29 @@ export function CropSelector({
               {/* All Crops Section */}
               <section>
                 <div className="flex items-center gap-2 mb-3">
-                  <h3 className="text-sm font-medium text-muted-foreground">
+                  <h2 className="text-sm font-medium text-muted-foreground">
                     {t('harvest.allCrops')}
-                  </h3>
+                  </h2>
                   <Badge variant="secondary" className="text-xs">
                     {allCrops.length}
                   </Badge>
                 </div>
-                <div className="space-y-2">
-                  {allCrops.map((crop) => (
-                    <CropItem key={crop.id} crop={crop} onSelect={onSelect} />
-                  ))}
-                </div>
+                {allCrops.length === 0 ? (
+                  <div className="flex flex-col items-center gap-4 py-8">
+                    <p className="text-center text-muted-foreground">
+                      {t('crops.empty')}
+                    </p>
+                    <Button variant="outline" onClick={() => navigate('/cultures?new=1')}>
+                      {t('actions.addCrop')}
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {allCrops.map((crop) => (
+                      <CropItem key={crop.id} crop={crop} onSelect={onSelect} />
+                    ))}
+                  </div>
+                )}
               </section>
             </>
           )}
@@ -173,7 +191,7 @@ function CropItem({ crop, onSelect }: { crop: Crop; onSelect: (crop: Crop) => vo
       )}
     >
       <div className="flex items-center gap-3">
-        {crop.isFavorite && <Star className="h-4 w-4 text-amber-500 fill-amber-500" />}
+        {crop.isFavorite && <Star className="h-4 w-4 text-primary fill-primary" />}
         <span className="font-medium">{crop.name}</span>
       </div>
       <div className="flex items-center gap-2 text-muted-foreground">

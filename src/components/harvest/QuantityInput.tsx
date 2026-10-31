@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
@@ -17,7 +18,9 @@ import {
 } from '@/components/ui/select';
 import type { Crop, Cultivar, UnitType } from '@/domain/contracts/types';
 
-const UNITS: UnitType[] = ['kg', 'g', 'unit', 'bunch', 'liter', 'ml', 'box', 'bag'];
+const UNITS: UnitType[] = ['kg', 'g', 'unit', 'dozen', 'bunch', 'liter', 'ml', 'box', 'bag'];
+// Radix Select rejects value="" on items; sentinel for "no cultivar"
+const NONE = 'none';
 
 interface QuantityInputProps {
   crop: Crop;
@@ -40,7 +43,7 @@ export function QuantityInput({
   onUnitChange,
   onCultivarChange,
 }: QuantityInputProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   const handleQuickAdd = (amount: number) => {
     const newValue = Math.max(0, quantity + amount);
@@ -57,7 +60,7 @@ export function QuantityInput({
   };
 
   return (
-    <div className="flex flex-col h-full px-4 py-6 space-y-6">
+    <div className="flex flex-col h-full px-4 py-6 space-y-6 overflow-y-auto">
       {/* Crop Display */}
       <div className="text-center">
         <h2 className="text-2xl font-bold">{crop.name}</h2>
@@ -69,18 +72,18 @@ export function QuantityInput({
       {/* Cultivar Selection (if available) */}
       {cultivars.length > 0 && (
         <div className="space-y-2">
-          <label className="text-sm font-medium text-muted-foreground">
+          <Label htmlFor="harvest-cultivar" className="text-muted-foreground">
             {t('crops.cultivars')}
-          </label>
+          </Label>
           <Select
-            value={cultivar?.id || ''}
-            onValueChange={(val) => onCultivarChange(val || undefined)}
+            value={cultivar?.id ?? NONE}
+            onValueChange={(val) => onCultivarChange(val === NONE ? undefined : val)}
           >
-            <SelectTrigger>
+            <SelectTrigger id="harvest-cultivar">
               <SelectValue placeholder={t('crops.cultivars')} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">({t('crops.cultivars')})</SelectItem>
+              <SelectItem value={NONE}>{t('harvest.noCultivar')}</SelectItem>
               {cultivars.map((c) => (
                 <SelectItem key={c.id} value={c.id}>
                   {c.name}
@@ -101,14 +104,16 @@ export function QuantityInput({
             className="h-14 w-14 rounded-full"
             onClick={() => handleQuickAdd(-1)}
             disabled={quantity <= 0}
+            aria-label={t('actions.decrease')}
           >
             <Minus className="h-6 w-6" />
           </Button>
-          
+
           <div className="flex items-baseline gap-2">
             <Input
               type="number"
               inputMode="decimal"
+              aria-label={t('harvest.quantity')}
               value={quantity || ''}
               onChange={handleInputChange}
               className={cn(
@@ -125,6 +130,7 @@ export function QuantityInput({
             size="icon"
             className="h-14 w-14 rounded-full"
             onClick={() => handleQuickAdd(1)}
+            aria-label={t('actions.increase')}
           >
             <Plus className="h-6 w-6" />
           </Button>
@@ -132,7 +138,7 @@ export function QuantityInput({
 
         {/* Unit Selector */}
         <Select value={unit} onValueChange={(val) => onUnitChange(val as UnitType)}>
-          <SelectTrigger className="w-32">
+          <SelectTrigger className="w-32" aria-label={t('harvest.unit')}>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -155,7 +161,7 @@ export function QuantityInput({
             className="px-6 rounded-full"
             onClick={() => handleQuickAdd(amount)}
           >
-            +{amount}
+            +{amount.toLocaleString(i18n.language)}
           </Button>
         ))}
       </div>

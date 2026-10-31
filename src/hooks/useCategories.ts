@@ -2,7 +2,7 @@
  * Hook for managing crop categories
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/data/db';
 import { categoryRepository } from '@/data/repositories';
@@ -10,13 +10,7 @@ import type { CropCategory, CropCategoryType } from '@/domain/contracts/types';
 
 export function useCategories() {
   const categories = useLiveQuery(() => categoryRepository.getAll(), []);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    if (categories !== undefined) {
-      setIsLoading(false);
-    }
-  }, [categories]);
+  const isLoading = categories === undefined;
 
   const createCategory = useCallback(async (
     data: Omit<CropCategory, 'id' | 'createdAt' | 'updatedAt'>

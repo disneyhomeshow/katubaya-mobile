@@ -4,9 +4,23 @@
  */
 
 import { db } from './schema';
-import type { CropCategory, Crop, AppSettings } from '@/domain/contracts/types';
+import type { CropCategory, Crop, AppSettings, AnimalGroup } from '@/domain/contracts/types';
 
 const now = new Date().toISOString();
+
+// Helper to generate dates relative to now
+const daysAgo = (days: number): string => {
+  const date = new Date();
+  date.setDate(date.getDate() - days);
+  return date.toISOString();
+};
+
+const daysFromNow = (days: number): string => {
+  const date = new Date();
+  date.setDate(date.getDate() + days);
+  return date.toISOString();
+};
+
 
 /**
  * Predefined crop categories
@@ -18,6 +32,11 @@ export const DEFAULT_CATEGORIES: Omit<CropCategory, 'createdAt' | 'updatedAt'>[]
   { id: 'cat-herbs', name: 'Ervas', type: 'herbs', icon: '🌿', color: 'hsl(140, 50%, 45%)', sortOrder: 3 },
   { id: 'cat-nuts', name: 'Castanhas', type: 'nuts', icon: '🌰', color: 'hsl(30, 50%, 40%)', sortOrder: 4 },
   { id: 'cat-roots', name: 'Raízes', type: 'roots', icon: '🥔', color: 'hsl(25, 40%, 45%)', sortOrder: 5 },
+  // Livestock
+  { id: 'cat-eggs', name: 'Ovos', type: 'animal', icon: '🥚', color: 'hsl(40, 60%, 60%)', sortOrder: 6 },
+  { id: 'cat-dairy', name: 'Laticínios', type: 'animal', icon: '🧀', color: 'hsl(48, 80%, 55%)', sortOrder: 7 },
+  { id: 'cat-meat', name: 'Carnes', type: 'animal', icon: '🥩', color: 'hsl(355, 60%, 50%)', sortOrder: 8 },
+  { id: 'cat-honey', name: 'Mel', type: 'animal', icon: '🍯', color: 'hsl(35, 90%, 50%)', sortOrder: 9 },
 ];
 
 /**
@@ -49,20 +68,22 @@ export const SAMPLE_CROPS: Omit<Crop, 'createdAt' | 'updatedAt'>[] = [
   
   // Nuts
   { id: 'crop-castanha', categoryId: 'cat-nuts', name: 'Castanha do Pará', defaultUnit: 'kg', shelfLifeDaysDefault: 90, pricePerUnit: 80.00, isFavorite: false },
+
+  // Livestock
+  { id: 'crop-leite', categoryId: 'cat-dairy', name: 'Leite', defaultUnit: 'liter', shelfLifeDaysDefault: 3, pricePerUnit: 5.00, isFavorite: true },
+  { id: 'crop-queijo', categoryId: 'cat-dairy', name: 'Queijo Minas', defaultUnit: 'kg', shelfLifeDaysDefault: 30, pricePerUnit: 60.00, isFavorite: false },
+  { id: 'crop-ovos', categoryId: 'cat-eggs', name: 'Ovos Caipiras', defaultUnit: 'dozen', shelfLifeDaysDefault: 21, pricePerUnit: 15.00, isFavorite: true },
+  { id: 'crop-frango', categoryId: 'cat-meat', name: 'Frango Caipira', defaultUnit: 'kg', shelfLifeDaysDefault: 3, pricePerUnit: 25.00, isFavorite: false },
+  { id: 'crop-mel', categoryId: 'cat-honey', name: 'Mel', defaultUnit: 'kg', shelfLifeDaysDefault: 365, pricePerUnit: 50.00, isFavorite: false },
 ];
 
-// Helper to generate dates relative to now
-const daysAgo = (days: number): string => {
-  const date = new Date();
-  date.setDate(date.getDate() - days);
-  return date.toISOString();
-};
-
-const daysFromNow = (days: number): string => {
-  const date = new Date();
-  date.setDate(date.getDate() + days);
-  return date.toISOString();
-};
+/**
+ * Sample animal lots ("lotes de animais")
+ */
+export const SAMPLE_ANIMAL_GROUPS: Omit<AnimalGroup, 'createdAt' | 'updatedAt'>[] = [
+  { id: 'animals-vacas', name: 'Vacas em lactação', species: 'cattle', initialHeadcount: 6, headcount: 6, startedAt: daysAgo(400) },
+  { id: 'animals-galinhas', name: 'Galinhas poedeiras', species: 'poultry', initialHeadcount: 30, headcount: 28, startedAt: daysAgo(120) },
+];
 
 /**
  * Sample harvest events for testing
@@ -111,8 +132,14 @@ export const DEFAULT_SETTINGS: AppSettings = {
 export async function seedDatabase(): Promise<boolean> {
   try {
     const existingCategories = await db.categories.count();
-    
+
     if (existingCategories > 0) {
+      // Defaults added in later versions (e.g. livestock) must reach existing databases
+      const known = new Set(await db.categories.toCollection().primaryKeys());
+      const missing = DEFAULT_CATEGORIES.filter(cat => !known.has(cat.id));
+      if (missing.length > 0) {
+        await db.categories.bulkAdd(missing.map(cat => ({ ...cat, createdAt: now, updatedAt: now })));
+      }
       console.log('[Seed] Database already seeded, skipping...');
       return false;
     }
@@ -153,6 +180,11 @@ export async function seedDatabase(): Promise<boolean> {
         createdAt: now,
         updatedAt: now
       }))
+    );
+
+    // Seed sample animal lots
+    await db.animalGroups.bulkAdd(
+      SAMPLE_ANIMAL_GROUPS.map(group => ({ ...group, createdAt: now, updatedAt: now }))
     );
 
     // Initialize app settings

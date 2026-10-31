@@ -9,16 +9,16 @@ import { useTranslation } from 'react-i18next';
 import { ChevronLeft, Check } from 'lucide-react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { toast } from 'sonner';
+import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useHarvests } from '@/hooks/useHarvests';
 import { db } from '@/data/db/schema';
-import { cropRepository } from '@/data/repositories';
+import { cropRepository, categoryRepository, animalRepository } from '@/data/repositories';
 import {
   CropSelector,
   QuantityInput,
   ContextInput,
-  HarvestSummary,
 } from '@/components/harvest';
 import type { Crop, Cultivar, Zone, UnitType } from '@/domain/contracts/types';
 
@@ -56,9 +56,9 @@ export default function HarvestWizardPage() {
   const [quantity, setQuantity] = useState(0);
   const [unit, setUnit] = useState<UnitType>(prefillUnit || 'kg');
   const [zoneId, setZoneId] = useState<string | undefined>();
-  const [harvestDate, setHarvestDate] = useState(
-    new Date().toISOString().split('T')[0]
-  );
+  const [animalGroupId, setAnimalGroupId] = useState<string | undefined>();
+  // Local calendar date; toISOString() would give the UTC date (tomorrow after 21:00 in UTC-3)
+  const [harvestDate, setHarvestDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [notes, setNotes] = useState('');
 
   // Handle pre-fill from duplicate
@@ -83,21 +83,24 @@ export default function HarvestWizardPage() {
     }
   }, [prefillCropId, prefillCultivarId, prefillUnit, isInitialized, getCultivarsForCrop]);
 
-  // Load zones
-  const zones = useLiveQuery(() => db.zones.toArray(), [], []);
-  const selectedZone = zones.find((z) => z.id === zoneId);
+  // Load zones, animal lots and categories (the lot field shows only for 'animal' crops)
+  const zones = useLiveQuery(() => db.zones.orderBy('sortOrder').toArray(), [], []);
+  const animalGroups = useLiveQuery(() => animalRepository.getAll(), [], []);
+  const categories = useLiveQuery(() => categoryRepository.getAll(), [], []);
+  const showAnimalLot = categories.find((c) => c.id === selectedCrop?.categoryId)?.type === 'animal';
 
   // Load cultivars when crop is selected
   useEffect(() => {
     if (selectedCrop) {
       getCultivarsForCrop(selectedCrop.id).then(setCultivars);
-      setUnit(selectedCrop.defaultUnit);
     }
   }, [selectedCrop, getCultivarsForCrop]);
 
   const handleCropSelect = useCallback((crop: Crop) => {
     setSelectedCrop(crop);
     setSelectedCultivar(undefined);
+    setAnimalGroupId(undefined);
+    setUnit(crop.defaultUnit);
     setStep('quantity');
   }, []);
 
@@ -133,11 +136,11 @@ export default function HarvestWizardPage() {
       case 'quantity':
         return quantity > 0;
       case 'context':
-        return true;
+        return /^\d{4}-\d{2}-\d{2}$/.test(harvestDate) && harvestDate <= new Date().toLocaleDateString('en-CA');
       default:
         return false;
     }
-  }, [step, selectedCrop, quantity]);
+  }, [step, selectedCrop, quantity, harvestDate]);
 
   const handleSubmit = useCallback(async () => {
     if (!selectedCrop || quantity <= 0) return;
@@ -148,9 +151,11 @@ export default function HarvestWizardPage() {
         cropId: selectedCrop.id,
         cultivarId: selectedCultivar?.id,
         zoneId,
+        animalGroupId: showAnimalLot ? animalGroupId : undefined,
         quantity,
         unit,
-        harvestedAt: new Date(harvestDate).toISOString(),
+        // 'YYYY-MM-DD' alone parses as UTC midnight = previous evening in Brazil; pin to local noon
+        harvestedAt: new Date(`${harvestDate}T12:00:00`).toISOString(),
         notes: notes.trim() || undefined,
       });
 
@@ -160,7 +165,7 @@ export default function HarvestWizardPage() {
       navigate('/');
     } catch (error) {
       console.error('Failed to create harvest:', error);
-      toast.error(t('errors.generic'));
+      toast.error(t('errors.saveFailed'));
     } finally {
       setIsSubmitting(false);
     }
@@ -168,6 +173,8 @@ export default function HarvestWizardPage() {
     selectedCrop,
     selectedCultivar,
     zoneId,
+    animalGroupId,
+    showAnimalLot,
     quantity,
     unit,
     harvestDate,
@@ -183,12 +190,13 @@ export default function HarvestWizardPage() {
   return (
     <div className="flex flex-col h-dvh bg-background">
       {/* Header */}
-      <header className="flex items-center gap-3 px-4 py-3 border-b shrink-0">
+      <header className="flex items-center gap-3 px-4 py-3 pt-[calc(0.75rem+var(--safe-area-top))] border-b shrink-0">
         <Button
           variant="ghost"
           size="icon"
           onClick={handleBack}
           className="shrink-0"
+          aria-label={t('actions.back')}
         >
           <ChevronLeft className="h-5 w-5" />
         </Button>
@@ -200,6 +208,9 @@ export default function HarvestWizardPage() {
         </div>
         {/* Step Indicators */}
         <div className="flex gap-1.5">
+          <span className="sr-only" aria-live="polite">
+            {t('harvest.stepOf', { current: stepIndex + 1, total: STEPS.length })}
+          </span>
           {STEPS.map((s, i) => (
             <div
               key={s}
@@ -241,9 +252,13 @@ export default function HarvestWizardPage() {
           <ContextInput
             zones={zones}
             zoneId={zoneId}
+            animalGroups={animalGroups}
+            animalGroupId={animalGroupId}
+            showAnimalLot={showAnimalLot}
             harvestDate={harvestDate}
             notes={notes}
             onZoneChange={setZoneId}
+            onAnimalGroupChange={setAnimalGroupId}
             onDateChange={setHarvestDate}
             onNotesChange={setNotes}
           />
@@ -252,15 +267,16 @@ export default function HarvestWizardPage() {
 
       {/* Footer with Action Button */}
       {step !== 'crop' && (
-        <footer className="px-4 py-4 border-t shrink-0 bg-background">
+        <footer className="px-4 pt-4 pb-[calc(1rem+var(--safe-area-bottom))] border-t shrink-0 bg-background">
           <Button
             size="lg"
             className="w-full h-14 text-lg font-semibold"
             disabled={!canProceed() || isSubmitting}
+            aria-busy={isSubmitting}
             onClick={isLastStep ? handleSubmit : handleNext}
           >
             {isSubmitting ? (
-              <span className="animate-pulse">{t('actions.save')}...</span>
+              <span className="animate-pulse">{t('harvest.saving')}</span>
             ) : isLastStep ? (
               <>
                 <Check className="h-5 w-5 mr-2" />

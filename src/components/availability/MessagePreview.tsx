@@ -3,7 +3,7 @@
  */
 
 import { useTranslation } from 'react-i18next';
-import { Copy, Check, RefreshCw } from 'lucide-react';
+import { Copy, Check, RefreshCw, Smartphone } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -12,7 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 interface MessagePreviewProps {
   message: string;
   isStale?: boolean;
-  onCopy: () => Promise<void>;
+  onCopy: () => Promise<boolean>;
   onRegenerate?: () => void;
   isRegenerating?: boolean;
 }
@@ -28,7 +28,8 @@ export function MessagePreview({
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
-    await onCopy();
+    const ok = await onCopy();
+    if (!ok) return;
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -41,7 +42,8 @@ export function MessagePreview({
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <CardTitle className="text-base flex items-center gap-2">
-            📱 {t('availability.preview')}
+            <Smartphone className="h-4 w-4" aria-hidden="true" />
+            {t('availability.preview')}
           </CardTitle>
           {isStale && (
             <span className="text-xs text-harvest-warning font-medium">
@@ -52,7 +54,7 @@ export function MessagePreview({
       </CardHeader>
       <CardContent>
         {/* Message preview box styled like WhatsApp */}
-        <div className="bg-[#DCF8C6] dark:bg-[#005C4B] rounded-lg p-4 mb-4 font-mono text-sm whitespace-pre-wrap break-words max-h-64 overflow-y-auto">
+        <div className="bg-whatsapp text-foreground rounded-lg p-4 mb-4 text-base leading-relaxed whitespace-pre-wrap break-words max-h-64 overflow-y-auto">
           {message || t('availability.noItems')}
         </div>
 
@@ -80,6 +82,8 @@ export function MessagePreview({
           {onRegenerate && (
             <Button
               variant="outline"
+              size="icon"
+              aria-label={t('actions.regenerate')}
               onClick={onRegenerate}
               disabled={isRegenerating}
             >

@@ -3,9 +3,11 @@
  */
 
 import { db } from '../db/schema';
-import type { HarvestEvent, Crop, Cultivar } from '@/domain/contracts/types';
+import type { HarvestEvent, Crop, Cultivar, UnitType } from '@/domain/contracts/types';
 import { lotRepository } from './lotRepository';
 import { cropRepository } from './cropRepository';
+import { inventoryRepository } from './inventoryRepository';
+import { planFifoConsumption } from '@/domain/rules/processing';
 
 export interface CreateHarvestInput {
   cropId: string;
@@ -15,6 +17,7 @@ export interface CreateHarvestInput {
   unit: HarvestEvent['unit'];
   harvestedAt?: string;
   notes?: string;
+  animalGroupId?: string;
 }
 
 export const harvestRepository = {
@@ -60,6 +63,7 @@ export const harvestRepository = {
       harvestedAt: input.harvestedAt || now,
       notes: input.notes,
       lotId,
+      animalGroupId: input.animalGroupId,
       createdAt: now,
       updatedAt: now
     };
@@ -83,6 +87,33 @@ export const harvestRepository = {
     });
     
     return { harvest, lotId };
+  },
+
+  /**
+   * Turn stock of one product into another (leite → queijo).
+   * Consumes `input.quantity` of `input.cropId` oldest-expiry-first and registers the output as a harvest;
+   * each consumed lot gets a 'processing' adjustment pointing at the output harvest.
+   */
+  async createFromProcessing(
+    input: { cropId: string; unit: UnitType; quantity: number },
+    output: CreateHarvestInput
+  ): Promise<{ harvest: HarvestEvent; lotId: string }> {
+    return db.transaction('rw', [db.harvestEvents, db.lots, db.crops, db.cultivars, db.inventoryAdjustments], async () => {
+      // Only lots in the same unit: 10 L and 2 kg of the same product must never be summed
+      const lots = (await lotRepository.getByCrop(input.cropId)).filter(lot => lot.unit === input.unit);
+      const plan = planFifoConsumption(lots, input.quantity);
+      const result = await this.create(output);
+      for (const slice of plan) {
+        await inventoryRepository.createAdjustment({
+          lotId: slice.lotId,
+          quantityDelta: -slice.quantity,
+          reason: 'processing',
+          notes: output.notes,
+          harvestEventId: result.harvest.id,
+        });
+      }
+      return result;
+    });
   },
 
   /**

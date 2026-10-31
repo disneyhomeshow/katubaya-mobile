@@ -1,0 +1,1 @@
+export { AnimalLots } from './AnimalLots';

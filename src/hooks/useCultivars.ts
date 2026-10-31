@@ -2,7 +2,7 @@
  * Hook for managing cultivars
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/data/db';
 import type { Cultivar } from '@/domain/contracts/types';
@@ -14,14 +14,7 @@ export function useCultivars(cropId?: string) {
       : db.cultivars.toArray(),
     [cropId]
   );
-  
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    if (cultivars !== undefined) {
-      setIsLoading(false);
-    }
-  }, [cultivars]);
+  const isLoading = cultivars === undefined;
 
   const createCultivar = useCallback(async (
     data: Omit<Cultivar, 'id' | 'createdAt' | 'updatedAt'>

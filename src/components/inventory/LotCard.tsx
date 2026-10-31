@@ -40,7 +40,7 @@ export function LotCard({
   return (
     <Card className={cn(
       'transition-all',
-      expirationStatus === 'expired' && 'opacity-60 border-destructive/30',
+      expirationStatus === 'expired' && 'border-harvest-expired/30',
       expirationStatus === 'expiring_soon' && 'border-harvest-warning/50'
     )}>
       <CardContent className="p-4">
@@ -48,7 +48,7 @@ export function LotCard({
           <div className="flex-1 min-w-0">
             {/* Header */}
             <div className="flex items-center gap-2 mb-2">
-              <Package className="h-4 w-4 text-muted-foreground shrink-0" />
+              <Package className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden="true" />
               <h3 className="font-medium truncate">{displayName}</h3>
             </div>
 
@@ -56,15 +56,15 @@ export function LotCard({
             <p className="text-2xl font-bold text-primary mb-2">
               {lot.quantityRemaining}
               <span className="text-sm font-normal text-muted-foreground ml-1">
-                {lot.unit}
+                {t(`units.${lot.unit}`)}
               </span>
             </p>
 
             {/* Meta info */}
             <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
               <div className="flex items-center gap-1">
-                <Calendar className="h-3 w-3" />
-                <span>Colhido: {harvestDate}</span>
+                <Calendar className="h-3 w-3" aria-hidden="true" />
+                <span>{t('inventory.harvestedOn', { date: harvestDate })}</span>
               </div>
               <ExpirationBadge 
                 status={expirationStatus}
@@ -82,12 +82,14 @@ export function LotCard({
 
           {/* Actions */}
           <Button
+            type="button"
             variant="ghost"
             size="icon"
             onClick={onAdjust}
             className="shrink-0"
+            aria-label={t('inventory.adjust')}
           >
-            <Edit2 className="h-4 w-4" />
+            <Edit2 className="h-4 w-4" aria-hidden="true" />
           </Button>
         </div>
       </CardContent>

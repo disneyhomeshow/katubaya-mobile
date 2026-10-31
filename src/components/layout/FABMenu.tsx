@@ -1,20 +1,21 @@
 /**
- * Floating Action Button with action sheet
+ * Floating Action Button with quick-actions drawer
  */
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Wheat, PackageMinus, Leaf, Settings2, MapPin, X } from 'lucide-react';
+import { Plus, Wheat, PackageMinus, Leaf, PawPrint, Settings2, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from '@/components/ui/sheet';
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from '@/components/ui/drawer';
 
 export function FABMenu() {
   const { t } = useTranslation();
@@ -25,26 +26,32 @@ export function FABMenu() {
     {
       icon: Wheat,
       label: t('actions.logHarvest'),
-      description: 'Registrar nova colheita',
+      description: t('actions.logHarvestDesc'),
       onClick: () => navigate('/harvest/new'),
       primary: true,
     },
     {
       icon: PackageMinus,
       label: t('actions.adjustInventory'),
-      description: 'Ajustar quantidades do estoque',
+      description: t('actions.adjustInventoryDesc'),
       onClick: () => navigate('/inventory/adjust'),
     },
     {
       icon: Leaf,
       label: t('actions.addCrop'),
-      description: 'Cadastrar nova cultura',
-      onClick: () => navigate('/cultures'),
+      description: t('actions.addCropDesc'),
+      onClick: () => navigate('/cultures?new=1'),
+    },
+    {
+      icon: PawPrint,
+      label: t('actions.animalLots'),
+      description: t('actions.animalLotsDesc'),
+      onClick: () => navigate('/cultures?tab=animals'),
     },
     {
       icon: Settings2,
       label: t('actions.configureAvailability'),
-      description: 'Configurar lista de disponibilidade',
+      description: t('actions.configureAvailabilityDesc'),
       onClick: () => navigate('/availability/config'),
     },
   ];
@@ -55,27 +62,37 @@ export function FABMenu() {
   };
 
   return (
-    <Sheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger asChild>
+    <Drawer open={open} onOpenChange={setOpen}>
+      <DrawerTrigger asChild>
         <Button
-          size="lg"
-          className={cn(
-            'h-14 w-14 rounded-full shadow-lg -mt-6',
-            'bg-primary hover:bg-primary/90 text-primary-foreground',
-            'transition-transform active:scale-95'
-          )}
+          size="icon"
+          aria-label={t('actions.openQuickActions')}
+          aria-expanded={open}
+          className="h-14 w-14 rounded-full shadow-lg -mt-6 bg-primary hover:bg-primary/90 text-primary-foreground transition-transform active:scale-95 [&_svg]:size-7"
         >
-          <Plus className={cn('h-7 w-7 transition-transform', open && 'rotate-45')} />
+          <Plus
+            className={cn('transition-transform', open && 'rotate-45')}
+            aria-hidden="true"
+          />
         </Button>
-      </SheetTrigger>
-      <SheetContent side="bottom" className="rounded-t-2xl">
-        <SheetHeader className="pb-4">
-          <SheetTitle className="text-left">{t('home.quickActions')}</SheetTitle>
-        </SheetHeader>
-        <div className="grid gap-2 pb-6">
-          {actions.map((action, index) => (
+      </DrawerTrigger>
+      <DrawerContent
+        aria-describedby={undefined}
+        className="px-4 pb-[calc(1rem+var(--safe-area-bottom))]"
+      >
+        <DrawerHeader className="flex items-center justify-between px-0 text-left">
+          <DrawerTitle>{t('home.quickActions')}</DrawerTitle>
+          <DrawerClose asChild>
+            <Button variant="ghost" size="icon" aria-label={t('actions.close')}>
+              <X className="h-5 w-5" aria-hidden="true" />
+            </Button>
+          </DrawerClose>
+        </DrawerHeader>
+        <div className="grid gap-2">
+          {actions.map((action) => (
             <button
-              key={index}
+              key={action.label}
+              type="button"
               onClick={() => handleAction(action)}
               className={cn(
                 'flex items-center gap-4 p-4 rounded-xl text-left transition-colors',
@@ -84,17 +101,16 @@ export function FABMenu() {
                   : 'bg-muted/50 hover:bg-muted'
               )}
             >
-              <div className={cn(
-                'flex items-center justify-center h-12 w-12 rounded-full',
-                action.primary ? 'bg-primary text-primary-foreground' : 'bg-muted'
-              )}>
-                <action.icon className="h-6 w-6" />
+              <div
+                className={cn(
+                  'flex items-center justify-center h-12 w-12 shrink-0 rounded-full',
+                  action.primary ? 'bg-primary text-primary-foreground' : 'bg-muted'
+                )}
+              >
+                <action.icon className="h-6 w-6" aria-hidden="true" />
               </div>
               <div>
-                <p className={cn(
-                  'font-medium',
-                  action.primary && 'text-primary'
-                )}>
+                <p className={cn('font-medium', action.primary && 'text-primary')}>
                   {action.label}
                 </p>
                 <p className="text-sm text-muted-foreground">{action.description}</p>
@@ -102,7 +118,7 @@ export function FABMenu() {
             </button>
           ))}
         </div>
-      </SheetContent>
-    </Sheet>
+      </DrawerContent>
+    </Drawer>
   );
 }

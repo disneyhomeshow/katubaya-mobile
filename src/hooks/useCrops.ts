@@ -2,7 +2,7 @@
  * Hook for managing crops
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/data/db';
 import { cropRepository } from '@/data/repositories';
@@ -15,14 +15,7 @@ export function useCrops(categoryId?: string) {
       : cropRepository.getAll(),
     [categoryId]
   );
-  
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    if (crops !== undefined) {
-      setIsLoading(false);
-    }
-  }, [crops]);
+  const isLoading = crops === undefined;
 
   const createCrop = useCallback(async (
     data: Omit<Crop, 'id' | 'createdAt' | 'updatedAt'>

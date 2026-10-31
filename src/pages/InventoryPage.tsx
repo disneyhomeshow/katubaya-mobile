@@ -2,23 +2,25 @@
  * Inventory Page - Lot management with expiration tracking
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Package, AlertTriangle, RefreshCw } from 'lucide-react';
 import { AppShell } from '@/components/layout/AppShell';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { InventoryGroupCard, AdjustmentDialog } from '@/components/inventory';
+import { InventoryGroupCard, AdjustmentDialog, type ProcessingOutput } from '@/components/inventory';
 import { useInventory } from '@/hooks/useInventory';
 import { useCrops, useCultivars } from '@/hooks';
 import type { InventorySnapshot, Lot, Crop, Cultivar, AdjustmentReason } from '@/domain/contracts/types';
-import { lotRepository } from '@/data/repositories';
-import { db } from '@/data/db/schema';
+import { lotRepository, inventoryRepository, harvestRepository } from '@/data/repositories';
+import { toast } from 'sonner';
 
 export default function InventoryPage() {
   const { t } = useTranslation();
-  const { generateSnapshot, adjustLot, expiringLots } = useInventory();
+  const navigate = useNavigate();
+  const { adjustLot, expiringLots } = useInventory();
   const { crops } = useCrops();
   const { cultivars } = useCultivars();
   
@@ -31,20 +33,23 @@ export default function InventoryPage() {
   } | null>(null);
   const [adjustDialogOpen, setAdjustDialogOpen] = useState(false);
 
-  // Load snapshot on mount
-  useEffect(() => {
-    loadSnapshot();
-  }, []);
-
-  const loadSnapshot = async () => {
+  // Repository call is stable; useInventory().generateSnapshot is recreated every render
+  const loadSnapshot = useCallback(async () => {
     setIsLoading(true);
     try {
-      const snap = await generateSnapshot();
+      const snap = await inventoryRepository.generateSnapshot();
       setSnapshot(snap);
+    } catch {
+      toast.error(t('errors.generic'));
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [t]);
+
+  // Load snapshot on mount
+  useEffect(() => {
+    loadSnapshot();
+  }, [loadSnapshot]);
 
   const handleSelectLot = async (lotId: string) => {
     const lot = await lotRepository.getById(lotId);
@@ -59,9 +64,22 @@ export default function InventoryPage() {
     setAdjustDialogOpen(true);
   };
 
-  const handleAdjust = async (delta: number, reason: AdjustmentReason, notes?: string) => {
+  const handleAdjust = async (
+    delta: number,
+    reason: AdjustmentReason,
+    notes?: string,
+    output?: ProcessingOutput
+  ) => {
     if (!selectedLot) return;
-    await adjustLot(selectedLot.lot.id, delta, reason, notes);
+    if (output) {
+      await harvestRepository.createFromProcessing(
+        { cropId: selectedLot.lot.cropId, unit: selectedLot.lot.unit, quantity: Math.abs(delta) },
+        { ...output, notes }
+      );
+      toast.success(t('inventory.processed'));
+    } else {
+      await adjustLot(selectedLot.lot.id, delta, reason, notes);
+    }
     await loadSnapshot();
   };
 
@@ -73,8 +91,13 @@ export default function InventoryPage() {
         title={t('inventory.title')}
         rightContent={
           expiringCount > 0 && (
-            <Badge variant="destructive" className="gap-1">
-              <AlertTriangle className="h-3 w-3" />
+            <Badge
+              variant="outline"
+              role="status"
+              aria-label={`${t('home.expiringSoon')}: ${expiringCount}`}
+              className="gap-1 whitespace-nowrap bg-harvest-warning/10 text-harvest-warning border-harvest-warning"
+            >
+              <AlertTriangle className="h-3 w-3" aria-hidden="true" />
               {expiringCount}
             </Badge>
           )
@@ -89,12 +112,13 @@ export default function InventoryPage() {
               {t('inventory.totalItems', { count: snapshot.items.length })}
             </p>
             <Button
+              type="button"
               variant="ghost"
               size="sm"
               onClick={loadSnapshot}
               disabled={isLoading}
             >
-              <RefreshCw className={`h-4 w-4 mr-1 ${isLoading ? 'animate-spin' : ''}`} />
+              <RefreshCw className={isLoading ? 'animate-spin' : ''} aria-hidden="true" />
               {t('actions.regenerate')}
             </Button>
           </div>
@@ -102,19 +126,23 @@ export default function InventoryPage() {
 
         {/* Loading state */}
         {isLoading && (
-          <div className="flex items-center justify-center py-12">
-            <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
+          <div role="status" className="flex flex-col items-center justify-center gap-2 py-12">
+            <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" aria-hidden="true" />
+            <p className="text-sm text-muted-foreground">{t('inventory.loading')}</p>
           </div>
         )}
 
         {/* Empty state */}
         {!isLoading && (!snapshot || snapshot.items.length === 0) && (
           <div className="flex flex-col items-center justify-center py-12 text-center">
-            <Package className="h-16 w-16 text-muted-foreground/50 mb-4" />
+            <Package className="h-16 w-16 text-muted-foreground/50 mb-4" aria-hidden="true" />
             <h3 className="text-lg font-medium mb-1">{t('inventory.empty')}</h3>
             <p className="text-sm text-muted-foreground mb-4">
               {t('inventory.startHarvesting')}
             </p>
+            <Button type="button" onClick={() => navigate('/harvest/new')}>
+              {t('actions.logHarvest')}
+            </Button>
           </div>
         )}
 

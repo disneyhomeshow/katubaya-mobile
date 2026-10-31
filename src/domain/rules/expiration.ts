@@ -76,9 +76,9 @@ export function getExpirationColor(status: ExpirationStatus): {
       };
     case 'expired':
       return {
-        bg: 'bg-destructive/10',
-        text: 'text-destructive',
-        border: 'border-destructive'
+        bg: 'bg-harvest-expired/10',
+        text: 'text-harvest-expired',
+        border: 'border-harvest-expired'
       };
   }
 }
